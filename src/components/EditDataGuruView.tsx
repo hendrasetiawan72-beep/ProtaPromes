@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, BookOpen, Calendar, Clock, MapPin, CheckCircle2, Sparkles, ArrowRight, Shield } from 'lucide-react';
+import { User, BookOpen, Calendar, Clock, MapPin, CheckCircle2, Sparkles, Shield } from 'lucide-react';
 import { DocumentMeta, Teacher, Subject, MonthEffectiveBreakdown } from '../types';
 
 interface EditDataGuruViewProps {
@@ -10,7 +10,7 @@ interface EditDataGuruViewProps {
   selectedTeacherCode: string;
   onSelectTeacher: (code: string) => void;
   monthAnalysis: MonthEffectiveBreakdown[];
-  onNavigateToDocument: (tab: 'efektif' | 'promes' | 'prota') => void;
+  onNavigateToDocument?: (tab: 'efektif' | 'promes' | 'prota') => void;
 }
 
 export const EditDataGuruView: React.FC<EditDataGuruViewProps> = ({
@@ -61,20 +61,9 @@ export const EditDataGuruView: React.FC<EditDataGuruViewProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => onNavigateToDocument('efektif')}
-              className="inline-flex items-center gap-1.5 px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-semibold backdrop-blur-md border border-white/20 transition"
-            >
-              Lihat Analisis Minggu Efektif
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => onNavigateToDocument('promes')}
-              className="inline-flex items-center gap-1.5 px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-semibold backdrop-blur-md border border-white/20 transition"
-            >
-              Lihat PROMES
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
+            <div className="px-3.5 py-2 bg-white/10 text-white rounded-xl text-xs font-semibold backdrop-blur-md border border-white/20">
+              Sinkronisasi Otomatis Dokumen Aktif
+            </div>
           </div>
         </div>
 

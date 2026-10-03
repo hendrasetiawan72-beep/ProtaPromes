@@ -8,7 +8,9 @@ import {
   Sliders,
   UserCheck,
   BookOpen,
-  UserCog
+  UserCog,
+  Menu,
+  X
 } from 'lucide-react';
 import {
   INITIAL_SCHOOL_PROFILE,
@@ -40,7 +42,28 @@ import { UploadExcelModal } from './components/UploadExcelModal';
 import { PengaturanModal } from './components/PengaturanModal';
 import { ParseKbmResult, ParseKaldikResult } from './services/excelParser';
 
+const NAV_ITEMS = [
+  { id: 'jadwal', label: '1. Jadwal Pribadi Guru', icon: Clock, desc: 'Jadwal tatap muka mingguan guru' },
+  { id: 'editguru', label: '2. Edit Data Guru', icon: UserCog, desc: 'Identitas, NBM & sinkronisasi data' },
+  { id: 'efektif', label: '3. Analisis Minggu Efektif', icon: CalendarDays, desc: 'Minggu efektif Gasal & Genap' },
+  { id: 'promes', label: '4. Program Semester (PROMES)', icon: FileSpreadsheet, desc: 'Alokasi TP per minggu semester' },
+  { id: 'prota', label: '5. Program Tahunan (PROTA)', icon: FileText, desc: 'Pemetaan tahunan alokasi jam' },
+  { id: 'kaldik', label: '6. Kalender Pendidikan', icon: BookOpen, desc: 'Matriks kegiatan dan agenda sekolah' },
+] as const;
+
 export default function App() {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsSidebarOpen(false);
+    };
+    if (isSidebarOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isSidebarOpen]);
+
   // Main State
   const [school, setSchool] = useState<SchoolProfile>(() => {
     const saved = localStorage.getItem('jg_school');
@@ -234,29 +257,57 @@ export default function App() {
       }}
     >
       {/* Top Application Header (Hidden in Print Mode) */}
-      <header className="print:hidden sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-xs">
+      <header className="print:hidden sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 gap-4">
-            {/* School Branding */}
+          <div className="flex items-center justify-between h-16 gap-3 sm:gap-4">
+            {/* Left: 3-line hamburger button without text + School Branding + Active page indicator */}
             <div className="flex items-center gap-3">
-              <img
-                src={school.logoUrl}
-                alt="Logo SMK Muhammadiyah Bawang"
-                className="w-10 h-10 object-contain drop-shadow-xs"
-              />
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight flex items-center gap-1.5">
-                    JadwalGuru <span className="text-blue-600">Pro</span>
-                  </h1>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 uppercase tracking-wider">
-                    SMK Muhiba
-                  </span>
+              {/* Three-line icon button (garis tiga tanpa teks menu) */}
+              <button
+                onClick={() => setIsSidebarOpen(true)}
+                className="p-2 sm:p-2.5 rounded-xl text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200/90 active:scale-95 transition flex items-center justify-center border border-slate-200 shadow-2xs cursor-pointer"
+                aria-label="Buka bilah navigasi samping"
+                title="Buka navigasi samping"
+              >
+                <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
+              </button>
+
+              {/* School Branding */}
+              <div className="flex items-center gap-2.5 sm:gap-3">
+                <img
+                  src={school.logoUrl}
+                  alt="Logo SMK Muhammadiyah Bawang"
+                  className="w-9 h-9 sm:w-10 sm:h-10 object-contain drop-shadow-xs"
+                />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight flex items-center gap-1.5">
+                      JadwalGuru <span className="text-blue-600">Pro</span>
+                    </h1>
+                    <span className="hidden xs:inline-block text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 uppercase tracking-wider">
+                      SMK Muhiba
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 font-medium truncate max-w-[170px] sm:max-w-xs md:max-w-md">
+                    {school.name}
+                  </p>
                 </div>
-                <p className="text-[11px] text-slate-500 font-medium truncate max-w-[280px] sm:max-w-md">
-                  {school.name} • Sistem Terintegrasi Guru SMK
-                </p>
               </div>
+
+              {/* Active Menu Badge Indicator */}
+              {(() => {
+                const activeConfig = NAV_ITEMS.find(item => item.id === activeTab) || NAV_ITEMS[0];
+                const Icon = activeConfig.icon;
+                return (
+                  <div className="hidden lg:flex items-center gap-2 pl-3 border-l border-slate-200 text-xs">
+                    <span className="text-slate-400 font-medium">Halaman Aktif:</span>
+                    <span className="inline-flex items-center gap-1.5 font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-100 shadow-2xs">
+                      <Icon className="w-3.5 h-3.5 text-blue-600" />
+                      {activeConfig.label}
+                    </span>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Header Right Actions */}
@@ -281,7 +332,7 @@ export default function App() {
               {/* Upload Excel Button */}
               <button
                 onClick={() => setIsUploadModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold rounded-xl shadow-xs transition transform active:scale-95"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold rounded-xl shadow-xs transition transform active:scale-95 cursor-pointer"
               >
                 <UploadCloud className="w-4 h-4" />
                 <span className="hidden sm:inline">Upload Excel</span>
@@ -290,7 +341,7 @@ export default function App() {
               {/* Settings Button */}
               <button
                 onClick={() => setIsSettingsModalOpen(true)}
-                className="p-2 text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-xl border border-slate-200 transition"
+                className="p-2 text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-xl border border-slate-200 transition cursor-pointer"
                 title="Pengaturan Identitas Sekolah"
               >
                 <Sliders className="w-4 h-4" />
@@ -298,85 +349,143 @@ export default function App() {
             </div>
           </div>
         </div>
+      </header>
 
-        {/* Navigation Tabs Bar */}
-        <div className="border-t border-slate-200/80 bg-slate-50/70 overflow-x-auto scrollbar-none">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center space-x-1 sm:space-x-2 py-2">
-            <button
-              onClick={() => setActiveTab('jadwal')}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition ${
-                activeTab === 'jadwal'
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
-              }`}
-            >
-              <Clock className="w-4 h-4" />
-              1. Jadwal Pribadi Guru
-            </button>
+      {/* Backdrop Overlay for Bilah Samping */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs transition-opacity duration-300 print:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
 
-            {/* Menu Edit Data Guru as explicitly requested */}
-            <button
-              onClick={() => setActiveTab('editguru')}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition ${
-                activeTab === 'editguru'
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
-              }`}
-            >
-              <UserCog className="w-4 h-4" />
-              2. Edit Data Guru
-            </button>
+      {/* Bilah Samping (Sidebar Navigation Drawer) */}
+      <aside
+        className={`fixed top-0 bottom-0 left-0 z-50 w-72 sm:w-80 bg-white shadow-2xl flex flex-col transition-transform duration-300 ease-in-out print:hidden ${
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+        aria-label="Menu Bilah Samping"
+      >
+        {/* Header Bilah Samping */}
+        <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/90">
+          <div className="flex items-center gap-3">
+            <img
+              src={school.logoUrl}
+              alt="Logo SMK Muhammadiyah Bawang"
+              className="w-9 h-9 object-contain drop-shadow-xs"
+            />
+            <div>
+              <h2 className="text-base font-extrabold text-slate-900 leading-tight">
+                JadwalGuru <span className="text-blue-600">Pro</span>
+              </h2>
+              <p className="text-[11px] text-slate-500 font-medium truncate max-w-[170px]">
+                {school.name}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setIsSidebarOpen(false)}
+            className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition cursor-pointer"
+            aria-label="Tutup bilah samping"
+            title="Tutup bilah samping"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
 
-            <button
-              onClick={() => setActiveTab('efektif')}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition ${
-                activeTab === 'efektif'
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
-              }`}
-            >
-              <CalendarDays className="w-4 h-4" />
-              3. Analisis Minggu Efektif
-            </button>
-
-            <button
-              onClick={() => setActiveTab('promes')}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition ${
-                activeTab === 'promes'
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
-              }`}
-            >
-              <FileSpreadsheet className="w-4 h-4" />
-              4. Program Semester (PROMES)
-            </button>
-
-            <button
-              onClick={() => setActiveTab('prota')}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition ${
-                activeTab === 'prota'
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
-              }`}
-            >
-              <FileText className="w-4 h-4" />
-              5. Program Tahunan (PROTA)
-            </button>
-
-            <button
-              onClick={() => setActiveTab('kaldik')}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition ${
-                activeTab === 'kaldik'
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
-              }`}
-            >
-              <BookOpen className="w-4 h-4" />
-              6. Kalender Pendidikan
-            </button>
+        {/* Profil Guru Aktif di Bilah Samping */}
+        <div className="p-3.5 mx-3.5 my-3 bg-gradient-to-br from-blue-50 to-indigo-50/60 rounded-2xl border border-blue-100/90 shadow-2xs">
+          <div className="flex items-center gap-1.5 mb-1 text-[10px] font-bold text-blue-800 uppercase tracking-wider">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span>Profil Guru Aktif</span>
+          </div>
+          <p className="text-xs font-bold text-slate-900 truncate">
+            {meta.teacherName}
+          </p>
+          <div className="flex items-center gap-1.5 mt-1 text-[11px] text-slate-600">
+            <span className="font-mono bg-white px-1.5 py-0.5 rounded border border-blue-200/80 font-bold text-blue-700 text-[10px]">
+              [{meta.teacherCode}]
+            </span>
+            <span className="truncate">{meta.subjectName} ({meta.grade})</span>
           </div>
         </div>
-      </header>
+
+        {/* Daftar Navigasi di Bilah Samping */}
+        <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1.5 scrollbar-thin">
+          <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            Menu Navigasi
+          </div>
+
+          {NAV_ITEMS.map(item => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => {
+                  setActiveTab(item.id);
+                  setIsSidebarOpen(false);
+                }}
+                className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs sm:text-sm font-bold transition text-left cursor-pointer group ${
+                  isActive
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-8 h-8 rounded-xl flex items-center justify-center transition ${
+                      isActive
+                        ? 'bg-white/20 text-white'
+                        : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200 group-hover:text-slate-900'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="leading-tight">{item.label}</div>
+                    <div
+                      className={`text-[10px] font-normal ${
+                        isActive ? 'text-blue-100' : 'text-slate-400'
+                      }`}
+                    >
+                      {item.desc}
+                    </div>
+                  </div>
+                </div>
+                {isActive && (
+                  <span className="w-2 h-2 rounded-full bg-white shrink-0 shadow-xs" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Tombol Aksi Tambahan di Bagian Bawah Bilah Samping */}
+        <div className="p-3.5 border-t border-slate-100 bg-slate-50/70 space-y-2">
+          <button
+            onClick={() => {
+              setIsUploadModalOpen(true);
+              setIsSidebarOpen(false);
+            }}
+            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs transition cursor-pointer"
+          >
+            <UploadCloud className="w-4 h-4" />
+            <span>Upload Excel (KBM / Kaldik)</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setIsSettingsModalOpen(true);
+              setIsSidebarOpen(false);
+            }}
+            className="w-full flex items-center justify-center gap-2 py-2 px-4 text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-semibold transition cursor-pointer"
+          >
+            <Sliders className="w-4 h-4" />
+            <span>Pengaturan Identitas Sekolah</span>
+          </button>
+        </div>
+      </aside>
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 print:p-0 print:m-0">
