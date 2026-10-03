@@ -166,15 +166,21 @@ export const downloadMasterPromesProtaJson = (
  * Parse an uploaded Master Promes-Prota file (.xlsx, .xls, or .json)
  */
 export const parseMasterPromesProtaFile = async (
-  file: File,
+  input: File | ArrayBuffer | string,
+  fileNameOrHpw?: string | number,
   currentHpw: number = 4
 ): Promise<ParsedMasterData> => {
-  const fileName = file.name.toLowerCase();
+  const effectiveHpw = typeof fileNameOrHpw === 'number' ? fileNameOrHpw : currentHpw;
+  let resolvedName = typeof fileNameOrHpw === 'string' ? fileNameOrHpw : '';
+  if (input instanceof File) {
+    resolvedName = input.name;
+  }
+  const isJson = resolvedName.toLowerCase().endsWith('.json') || (typeof input === 'string' && input.trim().startsWith('{'));
 
   // If JSON
-  if (fileName.endsWith('.json')) {
+  if (isJson) {
     try {
-      const text = await file.text();
+      const text = typeof input === 'string' ? input : (input instanceof File ? await input.text() : new TextDecoder().decode(input));
       const parsed = JSON.parse(text);
       const objs1: LearningObjective[] = Array.isArray(parsed.objectivesSem1) ? parsed.objectivesSem1 : [];
       const objs2: LearningObjective[] = Array.isArray(parsed.objectivesSem2) ? parsed.objectivesSem2 : [];
@@ -202,165 +208,150 @@ export const parseMasterPromesProtaFile = async (
   }
 
   // If Excel (.xlsx, .xls)
-  return new Promise(resolve => {
-    const reader = new FileReader();
-    reader.onload = e => {
-      try {
-        const data = new Uint8Array(e.target?.result as ArrayBuffer);
-        const wb = XLSX.read(data, { type: 'array' });
+  try {
+    const rawBuffer = input instanceof File ? await input.arrayBuffer() : (typeof input === 'string' ? new TextEncoder().encode(input).buffer : input);
+    const data = new Uint8Array(rawBuffer);
+    const wb = XLSX.read(data, { type: 'array' });
 
-        let capaianPembelajaran: string | undefined = undefined;
-        let detectedWeeklyHours: number | undefined = undefined;
+    let capaianPembelajaran: string | undefined = undefined;
+    let detectedWeeklyHours: number | undefined = undefined;
 
-        // Check if there is a CAPAIAN_PEMBELAJARAN_UMUM sheet
-        const cpSheetName = wb.SheetNames.find(n => n.toUpperCase().includes('CAPAIAN') || n.toUpperCase().includes('INFO'));
-        if (cpSheetName) {
-          const cpSheet = wb.Sheets[cpSheetName];
-          const cpRows: any[][] = XLSX.utils.sheet_to_json(cpSheet, { header: 1 });
-          for (let r = 0; r < cpRows.length; r++) {
-            const row = cpRows[r];
-            if (!row || row.length === 0) continue;
-            const label = String(row[0] || '').toLowerCase();
-            const val = String(row[1] || row[0] || '');
+    // Check if there is a CAPAIAN_PEMBELAJARAN_UMUM sheet
+    const cpSheetName = wb.SheetNames.find(n => n.toUpperCase().includes('CAPAIAN') || n.toUpperCase().includes('INFO'));
+    if (cpSheetName) {
+      const cpSheet = wb.Sheets[cpSheetName];
+      const cpRows: any[][] = XLSX.utils.sheet_to_json(cpSheet, { header: 1 });
+      for (let r = 0; r < cpRows.length; r++) {
+        const row = cpRows[r];
+        if (!row || row.length === 0) continue;
+        const label = String(row[0] || '').toLowerCase();
+        const val = String(row[1] || row[0] || '');
 
-            if (label.includes('beban belajar') || label.includes('jp per minggu')) {
-              const num = parseInt(val.replace(/\D/g, ''), 10);
-              if (num > 0) detectedWeeklyHours = num;
-            }
-
-            if (label.includes('capaian pembelajaran umum') && cpRows[r + 1] && cpRows[r + 1][0]) {
-              capaianPembelajaran = String(cpRows[r + 1][0]).trim();
-            }
-          }
+        if (label.includes('beban belajar') || label.includes('jp per minggu')) {
+          const num = parseInt(val.replace(/\D/g, ''), 10);
+          if (num > 0) detectedWeeklyHours = num;
         }
 
-        // Get main TP sheet
-        const tpSheetName = wb.SheetNames.find(n => n.toUpperCase().includes('MASTER') || n.toUpperCase().includes('TP') || n.toUpperCase().includes('PROMES')) || wb.SheetNames[0];
-        const tpSheet = wb.Sheets[tpSheetName];
-        const rawRows: any[][] = XLSX.utils.sheet_to_json(tpSheet, { header: 1 });
-
-        // Find header row index
-        let headerRowIdx = -1;
-        let colIdxMap: Record<string, number> = {};
-
-        for (let i = 0; i < Math.min(10, rawRows.length); i++) {
-          const row = rawRows[i];
-          if (!row) continue;
-          const strRow = row.map(c => String(c || '').toLowerCase().trim());
-          
-          const hasTp = strRow.some(c => c.includes('tujuan') || c.includes('tp') || c.includes('materi'));
-          const hasElemen = strRow.some(c => c.includes('elemen') || c.includes('element'));
-
-          if (hasTp || hasElemen) {
-            headerRowIdx = i;
-            strRow.forEach((colName, cIdx) => {
-              if (colName.includes('semester') || colName.includes('smt') || colName.includes('sem')) {
-                colIdxMap.semester = cIdx;
-              } else if (colName.includes('kode') || colName.includes('no')) {
-                colIdxMap.code = cIdx;
-              } else if (colName.includes('elemen') || colName.includes('element')) {
-                colIdxMap.element = cIdx;
-              } else if (colName.includes('tujuan') || colName.includes('materi') || colName.includes('deskripsi') || colName.includes('lingkup')) {
-                colIdxMap.description = cIdx;
-              } else if (colName.includes('minggu') || colName.includes('week')) {
-                colIdxMap.weeks = cIdx;
-              } else if (colName.includes('jp') || colName.includes('alokasi') || colName.includes('jam')) {
-                colIdxMap.jp = cIdx;
-              } else if (colName.includes('capaian') || colName.includes('cp')) {
-                colIdxMap.cp = cIdx;
-              }
-            });
-            break;
-          }
+        if (label.includes('capaian pembelajaran umum') && cpRows[r + 1] && cpRows[r + 1][0]) {
+          capaianPembelajaran = String(cpRows[r + 1][0]).trim();
         }
-
-        if (headerRowIdx === -1) {
-          // Fallback default column indexes if header not detected
-          colIdxMap = {
-            semester: 0,
-            code: 1,
-            element: 2,
-            description: 3,
-            weeks: 4,
-            jp: 5,
-            cp: 6,
-          };
-          headerRowIdx = 3;
-        }
-
-        const hpw = detectedWeeklyHours || currentHpw;
-        const sem1List: LearningObjective[] = [];
-        const sem2List: LearningObjective[] = [];
-
-        for (let i = headerRowIdx + 1; i < rawRows.length; i++) {
-          const row = rawRows[i];
-          if (!row || row.length === 0) continue;
-
-          const desc = String(row[colIdxMap.description ?? 3] || '').trim();
-          if (!desc || desc.toLowerCase().includes('total') || desc.toLowerCase().includes('jumlah')) {
-            continue;
-          }
-
-          const rawSem = String(row[colIdxMap.semester ?? 0] || '1').toLowerCase();
-          const semester: 1 | 2 = (rawSem.includes('2') || rawSem.includes('genap')) ? 2 : 1;
-
-          const element = String(row[colIdxMap.element ?? 2] || (semester === 1 ? 'Membaca - Memirsa' : 'Menulis - Mempresentasikan')).trim();
-          const targetList = semester === 1 ? sem1List : sem2List;
-          const code = String(row[colIdxMap.code ?? 1] || `TP ${semester}.${targetList.length + 1}`).trim();
-
-          const rawWeeks = parseInt(String(row[colIdxMap.weeks ?? 4] || '').replace(/\D/g, ''), 10);
-          const rawJp = parseInt(String(row[colIdxMap.jp ?? 5] || '').replace(/\D/g, ''), 10);
-
-          let finalJp = 16;
-          if (rawJp && rawJp > 0) {
-            finalJp = rawJp;
-          } else if (rawWeeks && rawWeeks > 0) {
-            finalJp = rawWeeks * hpw;
-          } else {
-            finalJp = 4 * hpw;
-          }
-
-          const newObj: LearningObjective = {
-            id: `tp_${semester}_${Date.now()}_${targetList.length}`,
-            semester,
-            code,
-            element,
-            description: desc,
-            jp: finalJp,
-            weeklyAllocation: {},
-          };
-
-          targetList.push(newObj);
-        }
-
-        resolve({
-          success: true,
-          objectivesSem1: sem1List,
-          objectivesSem2: sem2List,
-          capaianPembelajaran,
-          weeklyHours: detectedWeeklyHours,
-          message: `Berhasil mengekstrak ${sem1List.length} TP Semester 1 dan ${sem2List.length} TP Semester 2.`,
-          totalParsed: sem1List.length + sem2List.length,
-        });
-      } catch (err: any) {
-        resolve({
-          success: false,
-          objectivesSem1: [],
-          objectivesSem2: [],
-          message: `Gagal memproses file Excel: ${err.message}`,
-          totalParsed: 0,
-        });
       }
+    }
+
+    // Get main TP sheet
+    const tpSheetName = wb.SheetNames.find(n => n.toUpperCase().includes('MASTER') || n.toUpperCase().includes('TP') || n.toUpperCase().includes('PROMES')) || wb.SheetNames[0];
+    const tpSheet = wb.Sheets[tpSheetName];
+    const rawRows: any[][] = XLSX.utils.sheet_to_json(tpSheet, { header: 1 });
+
+    // Find header row index
+    let headerRowIdx = -1;
+    let colIdxMap: Record<string, number> = {};
+
+    for (let i = 0; i < Math.min(10, rawRows.length); i++) {
+      const row = rawRows[i];
+      if (!row) continue;
+      const strRow = row.map(c => String(c || '').toLowerCase().trim());
+      
+      const hasTp = strRow.some(c => c.includes('tujuan') || c.includes('tp') || c.includes('materi'));
+      const hasElemen = strRow.some(c => c.includes('elemen') || c.includes('element'));
+
+      if (hasTp || hasElemen) {
+        headerRowIdx = i;
+        strRow.forEach((colName, cIdx) => {
+          if (colName.includes('semester') || colName.includes('smt') || colName.includes('sem')) {
+            colIdxMap.semester = cIdx;
+          } else if (colName.includes('kode') || colName.includes('no')) {
+            colIdxMap.code = cIdx;
+          } else if (colName.includes('elemen') || colName.includes('element')) {
+            colIdxMap.element = cIdx;
+          } else if (colName.includes('tujuan') || colName.includes('materi') || colName.includes('deskripsi') || colName.includes('lingkup')) {
+            colIdxMap.description = cIdx;
+          } else if (colName.includes('minggu') || colName.includes('week')) {
+            colIdxMap.weeks = cIdx;
+          } else if (colName.includes('jp') || colName.includes('alokasi') || colName.includes('jam')) {
+            colIdxMap.jp = cIdx;
+          } else if (colName.includes('capaian') || colName.includes('cp')) {
+            colIdxMap.cp = cIdx;
+          }
+        });
+        break;
+      }
+    }
+
+    if (headerRowIdx === -1) {
+      colIdxMap = {
+        semester: 0,
+        code: 1,
+        element: 2,
+        description: 3,
+        weeks: 4,
+        jp: 5,
+        cp: 6,
+      };
+      headerRowIdx = 3;
+    }
+
+    const hpw = detectedWeeklyHours || effectiveHpw;
+    const sem1List: LearningObjective[] = [];
+    const sem2List: LearningObjective[] = [];
+
+    for (let i = headerRowIdx + 1; i < rawRows.length; i++) {
+      const row = rawRows[i];
+      if (!row || row.length === 0) continue;
+
+      const desc = String(row[colIdxMap.description ?? 3] || '').trim();
+      if (!desc || desc.toLowerCase().includes('total') || desc.toLowerCase().includes('jumlah')) {
+        continue;
+      }
+
+      const rawSem = String(row[colIdxMap.semester ?? 0] || '1').toLowerCase();
+      const semester: 1 | 2 = (rawSem.includes('2') || rawSem.includes('genap')) ? 2 : 1;
+
+      const element = String(row[colIdxMap.element ?? 2] || (semester === 1 ? 'Membaca - Memirsa' : 'Menulis - Mempresentasikan')).trim();
+      const targetList = semester === 1 ? sem1List : sem2List;
+      const code = String(row[colIdxMap.code ?? 1] || `TP ${semester}.${targetList.length + 1}`).trim();
+
+      const rawWeeks = parseInt(String(row[colIdxMap.weeks ?? 4] || '').replace(/\D/g, ''), 10);
+      const rawJp = parseInt(String(row[colIdxMap.jp ?? 5] || '').replace(/\D/g, ''), 10);
+
+      let finalJp = 16;
+      if (rawJp && rawJp > 0) {
+        finalJp = rawJp;
+      } else if (rawWeeks && rawWeeks > 0) {
+        finalJp = rawWeeks * hpw;
+      } else {
+        finalJp = 4 * hpw;
+      }
+
+      const newObj: LearningObjective = {
+        id: `tp_${semester}_${Date.now()}_${targetList.length}`,
+        semester,
+        code,
+        element,
+        description: desc,
+        jp: finalJp,
+        weeklyAllocation: {},
+      };
+
+      targetList.push(newObj);
+    }
+
+    return {
+      success: true,
+      objectivesSem1: sem1List,
+      objectivesSem2: sem2List,
+      capaianPembelajaran,
+      weeklyHours: detectedWeeklyHours,
+      message: `Berhasil mengekstrak ${sem1List.length} TP Semester 1 dan ${sem2List.length} TP Semester 2.`,
+      totalParsed: sem1List.length + sem2List.length,
     };
-    reader.onerror = () => {
-      resolve({
-        success: false,
-        objectivesSem1: [],
-        objectivesSem2: [],
-        message: 'Gagal membaca file dari perangkat.',
-        totalParsed: 0,
-      });
+  } catch (err: any) {
+    return {
+      success: false,
+      objectivesSem1: [],
+      objectivesSem2: [],
+      message: `Gagal memproses file Excel: ${err.message}`,
+      totalParsed: 0,
     };
-    reader.readAsArrayBuffer(file);
-  });
+  }
 };

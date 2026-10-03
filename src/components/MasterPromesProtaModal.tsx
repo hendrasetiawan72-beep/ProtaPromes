@@ -93,19 +93,40 @@ export const MasterPromesProtaModal: React.FC<MasterPromesProtaModalProps> = ({
 
   // Handle File Selection
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const inputEl = e.target;
+    const file = inputEl.files?.[0];
     if (!file) return;
+
+    const fileName = file.name;
+    let fileData: ArrayBuffer | string;
+    try {
+      if (fileName.toLowerCase().endsWith('.json')) {
+        fileData = await file.text();
+      } else {
+        fileData = await file.arrayBuffer();
+      }
+    } catch (readErr: any) {
+      console.error('Error reading file:', readErr);
+      setUploadErrorMessage(`Gagal membaca file dari sistem: ${readErr.message}`);
+      inputEl.value = '';
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    // Reset input immediately so no raw file descriptor is held
+    inputEl.value = '';
+    if (fileInputRef.current) fileInputRef.current.value = '';
 
     setIsProcessingFile(true);
     setUploadErrorMessage(null);
     setUploadSuccessMessage(null);
 
     try {
-      const result = await parseMasterPromesProtaFile(file, hpw);
+      const result = await parseMasterPromesProtaFile(fileData, fileName, hpw);
       if (result.success && result.totalParsed > 0) {
         setParsedPreview(result);
         setUploadSuccessMessage(
-          `File "${file.name}" berhasil dibaca! Terdeteksi ${result.objectivesSem1.length} TP Semester 1 dan ${result.objectivesSem2.length} TP Semester 2.`
+          `File "${fileName}" berhasil dibaca! Terdeteksi ${result.objectivesSem1.length} TP Semester 1 dan ${result.objectivesSem2.length} TP Semester 2.`
         );
       } else {
         setUploadErrorMessage(result.message || 'Format file master tidak dikenali atau kosong.');
@@ -114,6 +135,7 @@ export const MasterPromesProtaModal: React.FC<MasterPromesProtaModalProps> = ({
       setUploadErrorMessage(`Terjadi kesalahan: ${err.message}`);
     } finally {
       setIsProcessingFile(false);
+      if (inputEl) inputEl.value = '';
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };

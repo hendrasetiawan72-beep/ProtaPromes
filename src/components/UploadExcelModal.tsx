@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { UploadCloud, FileSpreadsheet, CheckCircle2, AlertCircle, Download, FileUp, X, Sparkles } from 'lucide-react';
-import { ParseKbmResult, ParseKaldikResult, parseKbmExcel, parseKaldikExcel, downloadSampleKbmFile, downloadSampleKaldikFile } from '../services/excelParser';
+import { ParseKbmResult, ParseKaldikResult, parseJadwalKBM, parseKaldikExcel, downloadSampleKbmFile, downloadSampleKaldikFile } from '../services/excelParser';
 
 interface UploadExcelModalProps {
   isOpen: boolean;
@@ -25,8 +25,27 @@ export const UploadExcelModal: React.FC<UploadExcelModalProps> = ({
   if (!isOpen) return null;
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const inputElement = e.target;
+    const file = inputElement.files?.[0];
     if (!file) return;
+
+    // 1. Saat user memilih file, langsung baca dengan file.arrayBuffer() di dalam event handler
+    let buffer: ArrayBuffer;
+    try {
+      buffer = await file.arrayBuffer();
+    } catch (readErr: any) {
+      console.error('Gagal membaca file buffer:', readErr);
+      setErrorMessage(`Gagal membaca file: ${readErr.message || 'File tidak dapat diakses'}`);
+      inputElement.value = '';
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    // 3. Segera reset input file agar tidak menahan referensi file descriptor di DOM
+    inputElement.value = '';
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
 
     setIsProcessing(true);
     setSuccessMessage(null);
@@ -34,7 +53,8 @@ export const UploadExcelModal: React.FC<UploadExcelModalProps> = ({
 
     try {
       if (activeUploadType === 'kbm') {
-        const result = await parseKbmExcel(file);
+        // 2. Langsung jalankan parser (parseJadwalKBM) dan simpan HASIL PARSING-nya ke state, bukan File object-nya
+        const result = await parseJadwalKBM(buffer);
         if (result.teachers.length === 0 && result.schedules.length === 0) {
           throw new Error('Tidak ditemukan data guru atau jadwal yang valid pada file. Pastikan terdapat sheet jadwal pelajaran dengan header Mapel dan Guru.');
         }
@@ -43,7 +63,7 @@ export const UploadExcelModal: React.FC<UploadExcelModalProps> = ({
           `Berhasil mengekstrak ${result.teachers.length} guru, ${result.subjects.length} mapel, ${result.stats.classesDetected.length} kelas, dan ${result.schedules.length} slot jadwal KBM.`
         );
       } else {
-        const result = await parseKaldikExcel(file);
+        const result = await parseKaldikExcel(buffer);
         onKaldikParsed(result);
         setSuccessMessage(
           `Berhasil memproses Kalender Pendidikan (${result.academicYear}). Minggu efektif Gasal: ${result.totalEffectiveSem1}, Genap: ${result.totalEffectiveSem2}. Terekstrak ${result.events.length} catatan agenda (*).`
@@ -54,6 +74,8 @@ export const UploadExcelModal: React.FC<UploadExcelModalProps> = ({
       setErrorMessage(err.message || 'Gagal memproses file Excel.');
     } finally {
       setIsProcessing(false);
+      // 3. Setelah berhasil / selesai, pastikan input file selalu ter-reset
+      if (inputElement) inputElement.value = '';
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };

@@ -103,8 +103,11 @@ function isHeaderKeyword(text: string): boolean {
  * - Extracts class name from the row(s) above and normalizes (adds X / XI / XII)
  * - Immune to shifted columns, blank gaps, or formatting differences between sheets
  */
-export async function parseKbmExcel(file: File): Promise<ParseKbmResult> {
-  const data = await file.arrayBuffer();
+export async function parseJadwalKBM(input: File | ArrayBuffer | Uint8Array): Promise<ParseKbmResult> {
+  const data: ArrayBuffer | Uint8Array =
+    input instanceof ArrayBuffer || input instanceof Uint8Array
+      ? input
+      : await input.arrayBuffer();
   const workbook = XLSX.read(data, { type: 'array' });
   const sheetNames = workbook.SheetNames;
 
@@ -533,8 +536,11 @@ export async function parseKbmExcel(file: File): Promise<ParseKbmResult> {
  * - Extracts all notes starting with '*' as important events
  * - Automatically detects academic year, weekly hours, and subject name
  */
-export async function parseKaldikExcel(file: File): Promise<ParseKaldikResult> {
-  const data = await file.arrayBuffer();
+export async function parseKaldikExcel(input: File | ArrayBuffer | Uint8Array): Promise<ParseKaldikResult> {
+  const data: ArrayBuffer | Uint8Array =
+    input instanceof ArrayBuffer || input instanceof Uint8Array
+      ? input
+      : await input.arrayBuffer();
   const workbook = XLSX.read(data, { type: 'array' });
   const sheetNames = workbook.SheetNames;
 
@@ -855,5 +861,7 @@ export async function parseKaldikExcel(file: File): Promise<ParseKaldikResult> {
     totalEffectiveSem2: sem2,
   };
 }
+
+export const parseKbmExcel = parseJadwalKBM;
 
 export { downloadSampleKbmFile, downloadSampleKaldikFile } from '../services/excelParserSample';

@@ -428,13 +428,6 @@ export const PromesView: React.FC<PromesViewProps> = ({
               </div>
             </div>
           </div>
-
-          {/* Bar Identitas Guru Rata Tengah untuk Cetak & Layar */}
-          <div className="mt-3 pt-2 border-t border-slate-200 text-center font-sans">
-            <p className="font-bold text-slate-900 text-xs sm:text-sm uppercase tracking-wider print:text-[8.5pt]">
-              GURU PENGAMPU: <span className="underline">{meta.teacherName}</span> &nbsp;&bull;&nbsp; {meta.subjectName} KELAS {meta.grade} &nbsp;&bull;&nbsp; ALOKASI: {hoursPerWeek} JP / MINGGU
-            </p>
-          </div>
         </div>
 
         {/* PROMES Grid Table - Layout Rapi, Teks Tidak Menabrak Garis, Angka Mengikuti JP Input */}
