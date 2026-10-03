@@ -1,0 +1,140 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    @apply antialiased;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  }
+}
+
+/* Print specific styles for F4 (Folio 210mm x 330mm) & Landscape printing */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 9pt !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Ensure all containers and tables never clip or hide columns */
+  div, section, main, article {
+    overflow: visible !important;
+  }
+
+  table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  th, td {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    word-break: normal !important;
+  }
+
+  /* Prevent awkward page breaks inside rows and signature blocks */
+  tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .break-inside-avoid {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+
+  .print\:hidden {
+    display: none !important;
+  }
+
+  .print\:border-none {
+    border: none !important;
+  }
+
+  .print\:shadow-none {
+    box-shadow: none !important;
+  }
+
+  .print\:p-0 {
+    padding: 0 !important;
+  }
+
+  .print\:m-0 {
+    margin: 0 !important;
+  }
+
+  .print\:min-w-0 {
+    min-width: 0 !important;
+  }
+
+  .print\:w-full {
+    width: 100% !important;
+  }
+
+  .print\:max-w-none {
+    max-width: none !important;
+  }
+
+  .print\:table-fixed {
+    table-layout: fixed !important;
+  }
+
+  .print\:table-auto {
+    table-layout: auto !important;
+  }
+
+  .print-kop-center {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+  }
+
+  .print\:text-2xs {
+    font-size: 7.5pt !important;
+    line-height: 9pt !important;
+  }
+
+  .print\:text-3xs {
+    font-size: 6.5pt !important;
+    line-height: 8pt !important;
+  }
+
+  .print\:py-0\.5 {
+    padding-top: 2px !important;
+    padding-bottom: 2px !important;
+  }
+
+  .print\:px-1 {
+    padding-left: 3px !important;
+    padding-right: 3px !important;
+  }
+
+  .print\:px-0\.5 {
+    padding-left: 1px !important;
+    padding-right: 1px !important;
+  }
+}
+
+/* Custom subtle scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

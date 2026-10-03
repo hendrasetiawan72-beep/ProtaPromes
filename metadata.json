@@ -1,0 +1,6 @@
+{
+  "name": "JadwalGuru Pro",
+  "description": "Sistem Terintegrasi Guru SMK: Jadwal KBM, Kalender Pendidikan (KALDIK), Analisis Minggu Efektif, PROMES, dan PROTA Otomatis",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
