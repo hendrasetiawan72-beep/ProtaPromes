@@ -114,7 +114,8 @@ export function exportPromesExcel(
   meta: DocumentMeta,
   objectivesSem1: LearningObjective[],
   objectivesSem2: LearningObjective[],
-  monthAnalysis: MonthEffectiveBreakdown[]
+  monthAnalysis: MonthEffectiveBreakdown[],
+  events?: KaldikEvent[]
 ): void {
   const wb = XLSX.utils.book_new();
 
@@ -156,51 +157,8 @@ export function exportPromesExcel(
     sheetData.push(headerRow2);
 
     const getWeekLabel = (month: MonthEffectiveBreakdown, weekNum: number): string | null => {
-      if (month.nonEffectiveWeeks === 0) return null;
-      if (month.effectiveWeeks === 0) {
-        if (month.notes && month.notes.length > 0) {
-          const noteIdx = Math.min(weekNum - 1, month.notes.length - 1);
-          return month.notes[noteIdx] || 'NON-EFEKTIF';
-        }
-        return 'NON-EFEKTIF';
-      }
-
-      const mName = month.monthName.toLowerCase();
-      if (isGasal) {
-        if (mName === 'juli' && (weekNum === 1 || weekNum === 2)) return 'LIBUR SEM GENAP';
-        if (mName === 'juli' && weekNum === 3) return 'MPLS';
-        if (mName === 'agustus' && weekNum === 3) return 'Asesmen Nasional (ANBK)';
-        if (mName === 'september' && weekNum === 1) return 'PSTS GASAL';
-        if (mName === 'desember') {
-          if (weekNum === 1) return 'PSAS';
-          if (weekNum === 2) return 'Ujian Susulan & Remedial';
-          if (weekNum === 3) return 'Pembagian Rapor';
-          return 'LIBUR SEM GANJIL';
-        }
-      } else {
-        if (mName === 'maret') {
-          if (weekNum === 1) return 'PSTS GENAP';
-          if (weekNum >= 3) return 'LIBUR IDUL FITRI';
-        }
-        if (mName === 'april') {
-          if (weekNum === 1) return 'PSAJ';
-          if (weekNum >= 3) return 'UKK';
-        }
-        if (mName === 'mei') {
-          if (weekNum === 1) return 'KELULUSAN';
-          if (weekNum === 2) return 'WISUDA';
-          return 'LIBUR NASIONAL';
-        }
-        if (mName === 'juni') {
-          if (weekNum === 1) return 'PSAT';
-          if (weekNum === 2) return 'REMEDIAL & RAPOR';
-          return 'LIBUR AKHIR TAHUN';
-        }
-      }
-
-      if (month.nonEffectiveWeeks > 0 && weekNum > (month.totalWeeks - month.nonEffectiveWeeks)) {
-        return 'NON-EFEKTIF';
-      }
+      const act = getKaldikWeekActivity(month.monthName, weekNum, isGasal, events);
+      if (act) return act.badge || act.text;
       return null;
     };
 
@@ -661,13 +619,20 @@ export function getKaldikWeekActivity(
 ): { text: string; badge: string; argbBg: string; argbFg: string; twColor: string } | null {
   const mLower = monthName.toLowerCase();
 
-  // Check event matches
-  const matchingEvent = events?.find(ev => ev.monthName.toLowerCase() === mLower && ev.weekNumber === weekNum);
+  // Check event matches with priority on exam, assessment, or holiday events
+  const matchingEvents = events?.filter(ev => ev.monthName.toLowerCase() === mLower && ev.weekNumber === weekNum) || [];
+  const matchingEvent = matchingEvents.find(ev => ev.type !== 'kegiatan') || matchingEvents[0];
   let text = matchingEvent?.name || '';
   const searchStr = (text || '').toLowerCase();
 
-  if (searchStr.includes('tka') || searchStr.includes('ukk')) {
+  if (searchStr.includes('tka') && searchStr.includes('ukk')) {
     return { text: text || 'Tes TKA & UKK Kejuruan', badge: 'TKA/UKK', argbBg: 'FFE9D5FF', argbFg: 'FF581C87', twColor: 'bg-purple-100 text-purple-900 border-purple-300' };
+  }
+  if (searchStr.includes('tka')) {
+    return { text: text || 'Tes Kemampuan Akademik (TKA)', badge: 'TKA', argbBg: 'FFE9D5FF', argbFg: 'FF581C87', twColor: 'bg-purple-100 text-purple-900 border-purple-300' };
+  }
+  if (searchStr.includes('ukk')) {
+    return { text: text || 'Uji Kompetensi Keahlian (UKK)', badge: 'UKK', argbBg: 'FFE9D5FF', argbFg: 'FF581C87', twColor: 'bg-purple-100 text-purple-900 border-purple-300' };
   }
   if (searchStr.includes('anbk') || searchStr.includes('asesmen') || searchStr.includes(' un ')) {
     return { text: text || 'Tes UN / Asesmen Nasional (ANBK)', badge: 'UN/ANBK', argbBg: 'FFCFFAFE', argbFg: 'FF164E63', twColor: 'bg-cyan-100 text-cyan-900 border-cyan-300' };
@@ -682,10 +647,10 @@ export function getKaldikWeekActivity(
     return { text: text || 'Tes Sumatif Akhir Tahun (PSAT)', badge: 'PSAT', argbBg: 'FFE0E7FF', argbFg: 'FF312E81', twColor: 'bg-indigo-100 text-indigo-900 border-indigo-300' };
   }
   if (searchStr.includes('psaj')) {
-    return { text: text || 'Tes PSAJ (Ujian Sekolah)', badge: 'PSAJ', argbBg: 'FFDBEAFE', argbFg: 'FF1E3A8A', twColor: 'bg-blue-100 text-blue-900 border-blue-300' };
+    return { text: text || 'Tes PSAJ (Ujian Sekolah Kelas XII)', badge: 'PSAJ', argbBg: 'FFDBEAFE', argbFg: 'FF1E3A8A', twColor: 'bg-blue-100 text-blue-900 border-blue-300' };
   }
   if (searchStr.includes('mpls')) {
-    return { text: text || 'Masa Pengenalan Lingkungan Sekolah', badge: 'MPLS', argbBg: 'FFD1FAE5', argbFg: 'FF065F46', twColor: 'bg-emerald-100 text-emerald-900 border-emerald-300' };
+    return { text: text || 'Masa Pengenalan Lingkungan Sekolah (MPLS)', badge: 'MPLS', argbBg: 'FFD1FAE5', argbFg: 'FF065F46', twColor: 'bg-emerald-100 text-emerald-900 border-emerald-300' };
   }
   if (searchStr.includes('remedial') || searchStr.includes('susulan')) {
     return { text: text || 'Ujian Susulan & Remedial', badge: 'REMEDIAL', argbBg: 'FFE0F2FE', argbFg: 'FF075985', twColor: 'bg-sky-100 text-sky-900 border-sky-300' };
@@ -693,11 +658,14 @@ export function getKaldikWeekActivity(
   if (searchStr.includes('rapor')) {
     return { text: text || 'Penyerahan Rapor Siswa', badge: 'RAPOR', argbBg: 'FFCCFBF1', argbFg: 'FF115E59', twColor: 'bg-teal-100 text-teal-900 border-teal-300' };
   }
-  if (searchStr.includes('wisuda') || searchStr.includes('kelulusan')) {
-    return { text: text || 'Wisuda & Pelepasan Siswa', badge: 'WISUDA', argbBg: 'FFFEF3C7', argbFg: 'FF92400E', twColor: 'bg-amber-100 text-amber-900 border-amber-300' };
+  if (searchStr.includes('wisuda') || searchStr.includes('pelepasan')) {
+    return { text: text || 'Wisuda & Pelepasan Siswa Kelas XII', badge: 'WISUDA', argbBg: 'FFFEF3C7', argbFg: 'FF92400E', twColor: 'bg-amber-100 text-amber-900 border-amber-300' };
   }
-  if (searchStr.includes('libur') || searchStr.includes('idul')) {
-    return { text: text || 'Hari Libur / Libur Semester', badge: 'LIBUR', argbBg: 'FFFEF3C7', argbFg: 'FF92400E', twColor: 'bg-amber-100 text-amber-900 border-amber-300' };
+  if (searchStr.includes('kelulusan') || searchStr.includes('lulus')) {
+    return { text: text || 'Pengumuman Kelulusan SMK', badge: 'LULUS', argbBg: 'FFFEF3C7', argbFg: 'FF92400E', twColor: 'bg-amber-100 text-amber-900 border-amber-300' };
+  }
+  if (searchStr.includes('libur') || searchStr.includes('idul') || searchStr.includes('cuti')) {
+    return { text: text || 'Hari Libur / Cuti', badge: 'LIBUR', argbBg: 'FFFEF3C7', argbFg: 'FF92400E', twColor: 'bg-amber-100 text-amber-900 border-amber-300' };
   }
 
   // Standard KALDIK rules per month
@@ -721,7 +689,8 @@ export function getKaldikWeekActivity(
       if (weekNum >= 3) return { text: 'Libur Hari Raya Idul Fitri 1448 H', badge: 'LIBUR', argbBg: 'FFFEF3C7', argbFg: 'FF92400E', twColor: 'bg-amber-100 text-amber-900 border-amber-300' };
     } else if (mLower === 'april') {
       if (weekNum === 1) return { text: 'Tes PSAJ (Ujian Sekolah Kelas XII)', badge: 'PSAJ', argbBg: 'FFDBEAFE', argbFg: 'FF1E3A8A', twColor: 'bg-blue-100 text-blue-900 border-blue-300' };
-      if (weekNum === 3 || weekNum === 4) return { text: 'Tes TKA & UKK Kejuruan', badge: 'TKA/UKK', argbBg: 'FFE9D5FF', argbFg: 'FF581C87', twColor: 'bg-purple-100 text-purple-900 border-purple-300' };
+      if (weekNum === 3) return { text: 'Tes TKA (Kemampuan Akademik) & UKK Kejuruan', badge: 'TKA/UKK', argbBg: 'FFE9D5FF', argbFg: 'FF581C87', twColor: 'bg-purple-100 text-purple-900 border-purple-300' };
+      if (weekNum === 4) return { text: 'Uji Kompetensi Keahlian (UKK) Lanjutan', badge: 'UKK', argbBg: 'FFE9D5FF', argbFg: 'FF581C87', twColor: 'bg-purple-100 text-purple-900 border-purple-300' };
       if (weekNum === 5) return { text: 'Libur Pasca Ujian Kejuruan', badge: 'LIBUR', argbBg: 'FFFEF3C7', argbFg: 'FF92400E', twColor: 'bg-amber-100 text-amber-900 border-amber-300' };
     } else if (mLower === 'mei') {
       if (weekNum === 1) return { text: 'Pengumuman Kelulusan SMK', badge: 'LULUS', argbBg: 'FFFEF3C7', argbFg: 'FF92400E', twColor: 'bg-amber-100 text-amber-900 border-amber-300' };

@@ -5,7 +5,7 @@ import { KopSurat } from './KopSurat';
 import { SignatureBlock } from './SignatureBlock';
 import { TujuanPembelajaranModal } from './TujuanPembelajaranModal';
 import { MasterPromesProtaModal } from './MasterPromesProtaModal';
-import { exportPromesExcel } from '../services/documentGenerator';
+import { exportPromesExcel, getKaldikWeekActivity } from '../services/documentGenerator';
 import { downloadMasterPromesProtaExcel } from '../services/masterPromesProtaService';
 
 interface PromesViewProps {
@@ -56,159 +56,12 @@ export const PromesView: React.FC<PromesViewProps> = ({
   const remainingPercent = 100 - tpColPercent - jpColPercent; // 69%
   const weekColPercent = totalWeeks > 0 ? (remainingPercent / totalWeeks).toFixed(2) : '2.5';
 
-  // Pemetaan minggu tidak efektif yang terintegrasi 100% dengan Kalender Pendidikan
-  // Menjamin jumlah minggu efektif dan non-efektif per bulan SANGAT TEPAT sesuai Kaldik
-  const nonEffectiveWeekMap = useMemo(() => {
-    const map: Record<string, { set: Set<number>; details: Record<number, { text: string; badge: string; color: string }> }> = {};
-
-    months.forEach(m => {
-      const monthLower = m.monthName.toLowerCase();
-      const targetNonEff = Math.min(m.totalWeeks, Math.max(0, m.nonEffectiveWeeks));
-      const set = new Set<number>();
-      const details: Record<number, { text: string; badge: string; color: string }> = {};
-
-      if (targetNonEff === 0) {
-        map[m.monthName] = { set, details };
-        return;
-      }
-
-      // Jika seluruh minggu di bulan ini tidak efektif
-      if (m.effectiveWeeks === 0 || targetNonEff >= m.totalWeeks) {
-        for (let w = 1; w <= m.totalWeeks; w++) {
-          set.add(w);
-        }
-      } else {
-        // Posisi default minggu non-efektif sesuai standar Kalender Pendidikan SMK Bawang
-        const preferredWeeks: number[] = [];
-        if (isGasal) {
-          if (monthLower === 'juli') preferredWeeks.push(1, 2, 3);
-          else if (monthLower === 'agustus') preferredWeeks.push(3);
-          else if (monthLower === 'september') preferredWeeks.push(1);
-          else if (monthLower === 'oktober') preferredWeeks.push(5);
-          else if (monthLower === 'november') preferredWeeks.push(4);
-          else if (monthLower === 'desember') preferredWeeks.push(1, 2, 3, 4, 5);
-        } else {
-          if (monthLower === 'januari') preferredWeeks.push(1);
-          else if (monthLower === 'februari') preferredWeeks.push(2);
-          else if (monthLower === 'maret') preferredWeeks.push(1, 3, 4);
-          else if (monthLower === 'april') preferredWeeks.push(1, 3, 4, 5);
-          else if (monthLower === 'mei') preferredWeeks.push(1, 2, 3, 4);
-          else if (monthLower === 'juni') preferredWeeks.push(1, 2, 3, 4);
-        }
-
-        // Gabungkan nomor minggu dari Kaldik events jika ada
-        if (events && events.length > 0) {
-          const monthEvents = events.filter(ev => ev.monthName.toLowerCase() === monthLower);
-          monthEvents.forEach(ev => {
-            if (ev.weekNumber && ev.weekNumber >= 1 && ev.weekNumber <= m.totalWeeks && !preferredWeeks.includes(ev.weekNumber)) {
-              preferredWeeks.push(ev.weekNumber);
-            }
-          });
-        }
-
-        // Ambil minggu dari prioritas hingga memenuhi targetNonEff
-        for (const w of preferredWeeks) {
-          if (set.size < targetNonEff && w <= m.totalWeeks) {
-            set.add(w);
-          }
-        }
-
-        // Jika masih kurang, tambahkan dari minggu akhir bulan
-        for (let w = m.totalWeeks; w >= 1 && set.size < targetNonEff; w--) {
-          set.add(w);
-        }
-      }
-
-      // Pasang keterangan badge dan warna untuk tiap minggu non-efektif
-      set.forEach(w => {
-        const matchingEvent = events?.find(ev => ev.monthName.toLowerCase() === monthLower && ev.weekNumber === w);
-        let badge = 'NON-EFEKTIF';
-        let color = 'bg-slate-200 text-slate-800 border-slate-300';
-        let text = matchingEvent?.name || m.notes?.join(', ') || 'Kegiatan Khusus / Non-KBM';
-
-        const checkStr = (matchingEvent?.name || text).toLowerCase();
-
-        if (checkStr.includes('mpls')) {
-          badge = 'MPLS';
-          color = 'bg-emerald-100 text-emerald-900 border-emerald-300';
-        } else if (checkStr.includes('anbk') || checkStr.includes('asesmen')) {
-          badge = 'ANBK';
-          color = 'bg-cyan-100 text-cyan-900 border-cyan-300';
-        } else if (checkStr.includes('psts') || checkStr.includes('tengah semester')) {
-          badge = 'PSTS';
-          color = 'bg-rose-200 text-rose-950 border-rose-400';
-        } else if (checkStr.includes('psas')) {
-          badge = 'PSAS';
-          color = 'bg-indigo-100 text-indigo-900 border-indigo-300';
-        } else if (checkStr.includes('psat') || checkStr.includes('akhir tahun')) {
-          badge = 'PSAT';
-          color = 'bg-indigo-100 text-indigo-900 border-indigo-300';
-        } else if (checkStr.includes('psaj')) {
-          badge = 'PSAJ';
-          color = 'bg-blue-100 text-blue-900 border-blue-300';
-        } else if (checkStr.includes('ukk')) {
-          badge = 'UKK';
-          color = 'bg-purple-100 text-purple-900 border-purple-300';
-        } else if (checkStr.includes('remedial') || checkStr.includes('susulan') || checkStr.includes('meeting')) {
-          badge = 'REMEDIAL';
-          color = 'bg-sky-100 text-sky-900 border-sky-300';
-        } else if (checkStr.includes('rapor')) {
-          badge = 'RAPOR';
-          color = 'bg-teal-100 text-teal-900 border-teal-300';
-        } else if (checkStr.includes('wisuda') || checkStr.includes('kelulusan') || checkStr.includes('lulus')) {
-          badge = 'WISUDA';
-          color = 'bg-amber-100 text-amber-900 border-amber-300';
-        } else if (checkStr.includes('libur') || checkStr.includes('idul')) {
-          badge = 'LIBUR';
-          color = 'bg-amber-100 text-amber-900 border-amber-300';
-        } else if (isGasal) {
-          if (monthLower === 'juli') {
-            if (w <= 2) { badge = 'LIBUR'; color = 'bg-amber-100 text-amber-900 border-amber-300'; text = 'Libur Semester Genap'; }
-            else { badge = 'MPLS'; color = 'bg-emerald-100 text-emerald-900 border-emerald-300'; text = 'Masa Pengenalan Lingkungan Sekolah'; }
-          } else if (monthLower === 'agustus') {
-            badge = 'ANBK'; color = 'bg-cyan-100 text-cyan-900 border-cyan-300'; text = 'Asesmen Nasional (ANBK)';
-          } else if (monthLower === 'september') {
-            badge = 'PSTS'; color = 'bg-rose-200 text-rose-950 border-rose-400'; text = 'Penilaian Sumatif Tengah Semester';
-          } else if (monthLower === 'desember') {
-            if (w === 1) { badge = 'PSAS'; color = 'bg-indigo-100 text-indigo-900 border-indigo-300'; text = 'Penilaian Sumatif Akhir Semester'; }
-            else if (w === 2) { badge = 'REMEDIAL'; color = 'bg-sky-100 text-sky-900 border-sky-300'; text = 'Ujian Susulan & Remedial'; }
-            else if (w === 3) { badge = 'RAPOR'; color = 'bg-teal-100 text-teal-900 border-teal-300'; text = 'Penyerahan Buku Rapor'; }
-            else { badge = 'LIBUR'; color = 'bg-amber-100 text-amber-900 border-amber-300'; text = 'Libur Akhir Semester Gasal'; }
-          }
-        } else {
-          if (monthLower === 'maret') {
-            if (w === 1) { badge = 'PSTS'; color = 'bg-rose-200 text-rose-950 border-rose-400'; text = 'PSTS Genap'; }
-            else { badge = 'LIBUR'; color = 'bg-amber-100 text-amber-900 border-amber-300'; text = 'Libur Hari Raya Idul Fitri'; }
-          } else if (monthLower === 'april') {
-            if (w === 1) { badge = 'PSAJ'; color = 'bg-blue-100 text-blue-900 border-blue-300'; text = 'PSAJ Kelas XII'; }
-            else { badge = 'UKK'; color = 'bg-purple-100 text-purple-900 border-purple-300'; text = 'Uji Kompetensi Keahlian'; }
-          } else if (monthLower === 'mei') {
-            if (w === 1) { badge = 'LULUS'; color = 'bg-amber-100 text-amber-900 border-amber-300'; text = 'Pengumuman Kelulusan'; }
-            else if (w === 2) { badge = 'WISUDA'; color = 'bg-amber-100 text-amber-900 border-amber-300'; text = 'Wisuda Siswa'; }
-            else { badge = 'LIBUR'; color = 'bg-amber-100 text-amber-900 border-amber-300'; text = 'Hari Libur Nasional'; }
-          } else if (monthLower === 'juni') {
-            if (w === 1) { badge = 'PSAT'; color = 'bg-indigo-100 text-indigo-900 border-indigo-300'; text = 'Penilaian Sumatif Akhir Tahun'; }
-            else if (w === 2) { badge = 'RAPOR'; color = 'bg-teal-100 text-teal-900 border-teal-300'; text = 'Remedial & Pembagian Rapor'; }
-            else { badge = 'LIBUR'; color = 'bg-amber-100 text-amber-900 border-amber-300'; text = 'Libur Akhir Tahun Pelajaran'; }
-          }
-        }
-
-        details[w] = { text, badge, color };
-      });
-
-      map[m.monthName] = { set, details };
-    });
-
-    return map;
-  }, [months, isGasal, events]);
-
+  // Pemetaan minggu dan agenda non-efektif terintegrasi 100% dengan Kalender Pendidikan (Kaldik)
   const getSpecialActivity = (monthName: string, week: number) => {
-    const data = nonEffectiveWeekMap[monthName];
-    if (!data || !data.set.has(week)) return null;
-    return data.details[week] || { text: 'Kegiatan Non-Efektif', badge: 'NON-EFEKTIF', color: 'bg-slate-200 text-slate-800 border-slate-300' };
+    return getKaldikWeekActivity(monthName, week, isGasal, events);
   };
 
-  // Daftar urut seluruh minggu efektif dalam semester ini (langsung sinkron dengan Kaldik)
+  // Daftar urut seluruh minggu efektif dalam semester ini (langsung sinkron 100% dengan Kaldik)
   const effectiveWeekKeys = useMemo(() => {
     const keys: string[] = [];
     months.forEach(m => {
@@ -220,7 +73,7 @@ export const PromesView: React.FC<PromesViewProps> = ({
       }
     });
     return keys;
-  }, [months, nonEffectiveWeekMap]);
+  }, [months, isGasal, events]);
 
   // Otomasi Penuh: Menghitung pembagian minggu efektif
   // Setiap kolom minggu efektif otomatis terisi angka sesuai input Edit Data Guru (hoursPerWeek: 4 -> 4, 5 -> 5)
@@ -278,7 +131,7 @@ export const PromesView: React.FC<PromesViewProps> = ({
   }, [currentObjectives, effectiveWeekKeys, hoursPerWeek]);
 
   const handleDownloadExcel = () => {
-    exportPromesExcel(school, meta, objectivesSem1, objectivesSem2, monthAnalysis);
+    exportPromesExcel(school, meta, objectivesSem1, objectivesSem2, monthAnalysis, events);
   };
 
   const handlePrintLandscape = (paper: 'f4' | 'auto' = 'f4') => {
@@ -586,14 +439,20 @@ export const PromesView: React.FC<PromesViewProps> = ({
                 <th className="border border-black"></th>
                 <th className="border border-black"></th>
                 {months.map(m =>
-                  Array.from({ length: m.totalWeeks }, (_, i) => (
-                    <th
-                      key={`${m.monthName}_w${i + 1}`}
-                      className="border border-black py-0.5 print:py-0 text-center font-mono"
-                    >
-                      {i + 1}
-                    </th>
-                  ))
+                  Array.from({ length: m.totalWeeks }, (_, i) => {
+                    const weekNum = i + 1;
+                    const special = getSpecialActivity(m.monthName, weekNum);
+                    const bgHeader = special ? special.twColor.split(' ')[0] : 'bg-white text-slate-900';
+                    return (
+                      <th
+                        key={`${m.monthName}_w${weekNum}`}
+                        className={`border border-black py-0.5 print:py-0 text-center font-mono ${bgHeader}`}
+                        title={special ? `${m.monthName} M${weekNum}: ${special.text}` : `${m.monthName} M${weekNum}: Minggu Efektif KBM (${hoursPerWeek} JP)`}
+                      >
+                        {weekNum}
+                      </th>
+                    );
+                  })
                 )}
               </tr>
             </thead>
@@ -620,10 +479,11 @@ export const PromesView: React.FC<PromesViewProps> = ({
                         const key = `${m.monthName}_${weekNum}`;
 
                         if (special) {
+                          const cellColor = special.twColor || (special as any).color || 'bg-slate-100 text-slate-800 border-slate-300';
                           return (
                             <td
                               key={key}
-                              className={`border border-black p-0 relative ${special.color}`}
+                              className={`border border-black p-0 relative ${cellColor}`}
                               title={special.text}
                             >
                               <div className="w-full h-12 print:h-10 flex items-center justify-center overflow-hidden p-0.5">
@@ -639,7 +499,7 @@ export const PromesView: React.FC<PromesViewProps> = ({
                         const allocatedHours = dynamicWeeklyAllocation[tp.id]?.[key];
 
                         return (
-                          <td key={key} className="border border-black text-center font-extrabold text-blue-900 p-0.5 print:p-0">
+                          <td key={key} className="border border-black text-center font-extrabold text-blue-900 p-0.5 print:p-0 bg-white">
                             {allocatedHours ? (
                               <span className="inline-block text-blue-950 font-black print:text-[8pt] text-xs sm:text-sm leading-none">
                                 {allocatedHours}
@@ -656,6 +516,79 @@ export const PromesView: React.FC<PromesViewProps> = ({
               })}
             </tbody>
           </table>
+        </div>
+
+        {/* Keterangan Agenda & Blok Libur Akhir Semester */}
+        <div className="mt-3 mb-2 p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-[10px] print:text-[6.5pt] text-left">
+          <div className="font-bold text-slate-800 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+            <span>Keterangan Kolom Non-Efektif &amp; Agenda Kaldik:</span>
+            <span className="font-normal text-slate-500">
+              {isGasal
+                ? 'Akhir Desember (Minggu 4 & 5): Blok Libur Akhir Semester Gasal'
+                : 'Akhir Juni (Minggu 3 & 4): Blok Libur Akhir Tahun Pelajaran'}
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="px-2 py-0.5 rounded border border-amber-300 bg-amber-100 text-amber-950 font-bold flex items-center gap-1">
+              <span className="w-2.5 h-2.5 rounded-xs bg-amber-400"></span>
+              <span>LIBUR (Blok Libur Akhir Des / Jun &amp; Libur Semester)</span>
+            </div>
+            {isGasal ? (
+              <>
+                <div className="px-2 py-0.5 rounded border border-emerald-300 bg-emerald-100 text-emerald-950 font-bold flex items-center gap-1">
+                  <span className="w-2.5 h-2.5 rounded-xs bg-emerald-500"></span>
+                  <span>MPLS (Masa Pengenalan Lingkungan Sekolah)</span>
+                </div>
+                <div className="px-2 py-0.5 rounded border border-cyan-300 bg-cyan-100 text-cyan-950 font-bold flex items-center gap-1">
+                  <span className="w-2.5 h-2.5 rounded-xs bg-cyan-500"></span>
+                  <span>UN/ANBK (Tes UN / Asesmen Nasional)</span>
+                </div>
+                <div className="px-2 py-0.5 rounded border border-rose-300 bg-rose-200 text-rose-950 font-bold flex items-center gap-1">
+                  <span className="w-2.5 h-2.5 rounded-xs bg-rose-500"></span>
+                  <span>PSTS (Sumatif Tengah Semester)</span>
+                </div>
+                <div className="px-2 py-0.5 rounded border border-indigo-300 bg-indigo-100 text-indigo-950 font-bold flex items-center gap-1">
+                  <span className="w-2.5 h-2.5 rounded-xs bg-indigo-500"></span>
+                  <span>PSAS (Sumatif Akhir Semester)</span>
+                </div>
+                <div className="px-2 py-0.5 rounded border border-sky-300 bg-sky-100 text-sky-950 font-bold flex items-center gap-1">
+                  <span className="w-2.5 h-2.5 rounded-xs bg-sky-500"></span>
+                  <span>REMEDIAL / SUSULAN</span>
+                </div>
+                <div className="px-2 py-0.5 rounded border border-teal-300 bg-teal-100 text-teal-950 font-bold flex items-center gap-1">
+                  <span className="w-2.5 h-2.5 rounded-xs bg-teal-500"></span>
+                  <span>RAPOR (Penyerahan Buku Rapor)</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="px-2 py-0.5 rounded border border-rose-300 bg-rose-200 text-rose-950 font-bold flex items-center gap-1">
+                  <span className="w-2.5 h-2.5 rounded-xs bg-rose-500"></span>
+                  <span>PSTS (Sumatif Tengah Semester Genap)</span>
+                </div>
+                <div className="px-2 py-0.5 rounded border border-blue-300 bg-blue-100 text-blue-950 font-bold flex items-center gap-1">
+                  <span className="w-2.5 h-2.5 rounded-xs bg-blue-500"></span>
+                  <span>PSAJ (Ujian Sekolah / Asesmen Jenjang)</span>
+                </div>
+                <div className="px-2 py-0.5 rounded border border-purple-300 bg-purple-100 text-purple-950 font-bold flex items-center gap-1">
+                  <span className="w-2.5 h-2.5 rounded-xs bg-purple-500"></span>
+                  <span>TKA/UKK (Tes Akademik &amp; Kejuruan)</span>
+                </div>
+                <div className="px-2 py-0.5 rounded border border-amber-300 bg-amber-100 text-amber-950 font-bold flex items-center gap-1">
+                  <span className="w-2.5 h-2.5 rounded-xs bg-amber-500"></span>
+                  <span>LULUS / WISUDA (Kelulusan &amp; Pelepasan)</span>
+                </div>
+                <div className="px-2 py-0.5 rounded border border-indigo-300 bg-indigo-100 text-indigo-950 font-bold flex items-center gap-1">
+                  <span className="w-2.5 h-2.5 rounded-xs bg-indigo-500"></span>
+                  <span>PSAT (Sumatif Akhir Tahun)</span>
+                </div>
+                <div className="px-2 py-0.5 rounded border border-teal-300 bg-teal-100 text-teal-950 font-bold flex items-center gap-1">
+                  <span className="w-2.5 h-2.5 rounded-xs bg-teal-500"></span>
+                  <span>RAPOR (Penyerahan Rapor Genap)</span>
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Official Blank Signature Block: Rata Tengah (Center Aligned) dengan NBM */}

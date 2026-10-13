@@ -114,41 +114,49 @@ export const INITIAL_SUBJECTS: Subject[] = [
 
 export const INITIAL_MONTH_ANALYSIS: MonthEffectiveBreakdown[] = [
   // Semester 1 (Gasal) - Total 27 Minggu, 10 Tidak Efektif, 17 Efektif | 101 Hari Efektif (Kolom Putih)
-  { monthName: 'Juli', semester: 1, totalWeeks: 5, nonEffectiveWeeks: 3, effectiveWeeks: 2, totalDays: 31, nonEffectiveDays: 19, effectiveDays: 12, notes: ['Libur Semester Genap', 'MPLS'] },
-  { monthName: 'Agustus', semester: 1, totalWeeks: 4, nonEffectiveWeeks: 1, effectiveWeeks: 3, totalDays: 31, nonEffectiveDays: 11, effectiveDays: 20, notes: ['Asesmen Nasional (ANBK)'] },
-  { monthName: 'September', semester: 1, totalWeeks: 4, nonEffectiveWeeks: 1, effectiveWeeks: 3, totalDays: 30, nonEffectiveDays: 11, effectiveDays: 19, notes: ['PSTS Gasal'] },
-  { monthName: 'Oktober', semester: 1, totalWeeks: 5, nonEffectiveWeeks: 0, effectiveWeeks: 5, totalDays: 31, nonEffectiveDays: 5, effectiveDays: 26, notes: [] },
-  { monthName: 'November', semester: 1, totalWeeks: 4, nonEffectiveWeeks: 0, effectiveWeeks: 4, totalDays: 30, nonEffectiveDays: 6, effectiveDays: 24, notes: [] },
-  { monthName: 'Desember', semester: 1, totalWeeks: 5, nonEffectiveWeeks: 5, effectiveWeeks: 0, totalDays: 31, nonEffectiveDays: 31, effectiveDays: 0, notes: ['PSAS', 'Ujian Susulan & Remedial', 'Pembagian Rapor', 'Libur Akhir Semester Gasal'] },
+  { monthName: 'Juli', semester: 1, totalWeeks: 5, nonEffectiveWeeks: 3, effectiveWeeks: 2, totalDays: 31, nonEffectiveDays: 19, effectiveDays: 12, notes: ['Libur Semester Genap (M1-M2)', 'MPLS (M3)'] },
+  { monthName: 'Agustus', semester: 1, totalWeeks: 4, nonEffectiveWeeks: 1, effectiveWeeks: 3, totalDays: 31, nonEffectiveDays: 11, effectiveDays: 20, notes: ['HUT RI ke-81', 'Tes UN / ANBK (M3)'] },
+  { monthName: 'September', semester: 1, totalWeeks: 4, nonEffectiveWeeks: 1, effectiveWeeks: 3, totalDays: 30, nonEffectiveDays: 11, effectiveDays: 19, notes: ['PSTS Gasal (M1)'] },
+  { monthName: 'Oktober', semester: 1, totalWeeks: 5, nonEffectiveWeeks: 0, effectiveWeeks: 5, totalDays: 31, nonEffectiveDays: 5, effectiveDays: 26, notes: ['KBM Efektif Penuh (M1-M5)'] },
+  { monthName: 'November', semester: 1, totalWeeks: 4, nonEffectiveWeeks: 0, effectiveWeeks: 4, totalDays: 30, nonEffectiveDays: 6, effectiveDays: 24, notes: ['KBM Efektif Penuh (M1-M4)'] },
+  { monthName: 'Desember', semester: 1, totalWeeks: 5, nonEffectiveWeeks: 5, effectiveWeeks: 0, totalDays: 31, nonEffectiveDays: 31, effectiveDays: 0, notes: ['PSAS (M1)', 'Susulan & Remedial (M2)', 'Pembagian Rapor (M3)', 'Libur Akhir Semester Gasal (M4-M5)'] },
   // Semester 2 (Genap) - Total 25 Minggu, 15 Tidak Efektif, 10 Efektif | 61 Hari Efektif (Kolom Putih)
-  { monthName: 'Januari', semester: 2, totalWeeks: 4, nonEffectiveWeeks: 0, effectiveWeeks: 4, totalDays: 31, nonEffectiveDays: 7, effectiveDays: 24, notes: [] },
-  { monthName: 'Februari', semester: 2, totalWeeks: 4, nonEffectiveWeeks: 0, effectiveWeeks: 4, totalDays: 28, nonEffectiveDays: 6, effectiveDays: 22, notes: [] },
-  { monthName: 'Maret', semester: 2, totalWeeks: 4, nonEffectiveWeeks: 3, effectiveWeeks: 1, totalDays: 31, nonEffectiveDays: 23, effectiveDays: 8, notes: ['PSTS Genap', 'Libur Menjelang & Hari Raya Idul Fitri 1448 H'] },
-  { monthName: 'April', semester: 2, totalWeeks: 5, nonEffectiveWeeks: 4, effectiveWeeks: 1, totalDays: 30, nonEffectiveDays: 23, effectiveDays: 7, notes: ['PSAJ', 'UKK (Uji Kompetensi Keahlian)'] },
-  { monthName: 'Mei', semester: 2, totalWeeks: 4, nonEffectiveWeeks: 4, effectiveWeeks: 0, totalDays: 31, nonEffectiveDays: 31, effectiveDays: 0, notes: ['Pengumuman Kelulusan & Wisuda', 'Hari Libur Nasional'] },
-  { monthName: 'Juni', semester: 2, totalWeeks: 4, nonEffectiveWeeks: 4, effectiveWeeks: 0, totalDays: 30, nonEffectiveDays: 30, effectiveDays: 0, notes: ['PSAT', 'Ujian Susulan & Rapor', 'Libur Akhir Tahun Pelajaran'] },
+  { monthName: 'Januari', semester: 2, totalWeeks: 4, nonEffectiveWeeks: 0, effectiveWeeks: 4, totalDays: 31, nonEffectiveDays: 7, effectiveDays: 24, notes: ['Awal Masuk KBM (M1)', 'KBM Efektif (M1-M4)'] },
+  { monthName: 'Februari', semester: 2, totalWeeks: 4, nonEffectiveWeeks: 0, effectiveWeeks: 4, totalDays: 28, nonEffectiveDays: 6, effectiveDays: 22, notes: ['KBM Efektif Penuh (M1-M4)'] },
+  { monthName: 'Maret', semester: 2, totalWeeks: 4, nonEffectiveWeeks: 3, effectiveWeeks: 1, totalDays: 31, nonEffectiveDays: 23, effectiveDays: 8, notes: ['PSTS Genap (M1)', 'Libur Idul Fitri 1448 H (M3-M4)'] },
+  { monthName: 'April', semester: 2, totalWeeks: 5, nonEffectiveWeeks: 4, effectiveWeeks: 1, totalDays: 30, nonEffectiveDays: 23, effectiveDays: 7, notes: ['PSAJ (M1)', 'Tes TKA & UKK (M3)', 'UKK Kejuruan (M4)', 'Libur Pasca Ujian (M5)'] },
+  { monthName: 'Mei', semester: 2, totalWeeks: 4, nonEffectiveWeeks: 4, effectiveWeeks: 0, totalDays: 31, nonEffectiveDays: 31, effectiveDays: 0, notes: ['Pengumuman Kelulusan (M1)', 'Wisuda Kelas XII (M2)', 'Libur Nasional & Persiapan PSAT (M3-M4)'] },
+  { monthName: 'Juni', semester: 2, totalWeeks: 4, nonEffectiveWeeks: 4, effectiveWeeks: 0, totalDays: 30, nonEffectiveDays: 30, effectiveDays: 0, notes: ['PSAT (M1)', 'Susulan & Rapor (M2)', 'Libur Akhir Tahun Pelajaran (M3-M4)'] },
 ];
 
 export const INITIAL_KALDIK_EVENTS: KaldikEvent[] = [
-  { id: '1', name: 'Libur Akhir Semester Genap TA Sebelumnya', dateRange: '1 - 12 Juli 2026', semester: 1, monthName: 'Juli', weekNumber: 1, type: 'libur' },
+  { id: '1a', name: 'Libur Akhir Semester Genap TA Sebelumnya', dateRange: '1 - 7 Juli 2026', semester: 1, monthName: 'Juli', weekNumber: 1, type: 'libur' },
+  { id: '1b', name: 'Libur Akhir Semester Genap TA Sebelumnya', dateRange: '8 - 12 Juli 2026', semester: 1, monthName: 'Juli', weekNumber: 2, type: 'libur' },
   { id: '2', name: 'Masa Pengenalan Lingkungan Sekolah (MPLS)', dateRange: '15 - 20 Juli 2026', semester: 1, monthName: 'Juli', weekNumber: 3, type: 'mpls' },
   { id: '3', name: 'Upacara HUT RI ke-81', dateRange: '17 Agustus 2026', semester: 1, monthName: 'Agustus', weekNumber: 3, type: 'kegiatan' },
   { id: '4', name: 'Tes UN / Asesmen Nasional (ANBK)', dateRange: '18 - 23 Agustus 2026', semester: 1, monthName: 'Agustus', weekNumber: 3, type: 'an' },
   { id: '5', name: 'Tes Sumatif Tengah Semester (PSTS) Gasal', dateRange: '1 - 6 September 2026', semester: 1, monthName: 'September', weekNumber: 1, type: 'psts' },
-  { id: '6', name: 'Tes Sumatif Akhir Semester (PSAS) Gasal', dateRange: '24 - 30 November 2026', semester: 1, monthName: 'Desember', weekNumber: 1, type: 'psas' },
+  { id: '6', name: 'Tes Sumatif Akhir Semester (PSAS) Gasal', dateRange: '24 Nov - 5 Des 2026', semester: 1, monthName: 'Desember', weekNumber: 1, type: 'psas' },
   { id: '7', name: 'Ujian Susulan, Remedial & Class Meeting', dateRange: '7 - 12 Desember 2026', semester: 1, monthName: 'Desember', weekNumber: 2, type: 'remedial' },
   { id: '8', name: 'Penyerahan Buku Laporan Hasil Belajar (Rapor)', dateRange: '18 Desember 2026', semester: 1, monthName: 'Desember', weekNumber: 3, type: 'kegiatan' },
-  { id: '9', name: 'Libur Akhir Semester Gasal', dateRange: '19 - 31 Desember 2026', semester: 1, monthName: 'Desember', weekNumber: 4, type: 'libur' },
+  { id: '9a', name: 'Libur Akhir Semester Gasal', dateRange: '19 - 25 Desember 2026', semester: 1, monthName: 'Desember', weekNumber: 4, type: 'libur' },
+  { id: '9b', name: 'Libur Akhir Semester Gasal', dateRange: '26 - 31 Desember 2026', semester: 1, monthName: 'Desember', weekNumber: 5, type: 'libur' },
   { id: '10', name: 'Awal Masuk KBM Semester Genap', dateRange: '4 Januari 2027', semester: 2, monthName: 'Januari', weekNumber: 1, type: 'kegiatan' },
   { id: '11', name: 'Tes Sumatif Tengah Semester (PSTS) Genap', dateRange: '1 - 6 Maret 2027', semester: 2, monthName: 'Maret', weekNumber: 1, type: 'psts' },
-  { id: '12', name: 'Libur Menjelang & Hari Raya Idul Fitri 1448 H', dateRange: '15 - 27 Maret 2027', semester: 2, monthName: 'Maret', weekNumber: 3, type: 'libur' },
+  { id: '12a', name: 'Libur Menjelang Hari Raya Idul Fitri 1448 H', dateRange: '15 - 20 Maret 2027', semester: 2, monthName: 'Maret', weekNumber: 3, type: 'libur' },
+  { id: '12b', name: 'Libur Hari Raya Idul Fitri 1448 H & Cuti Bersama', dateRange: '22 - 27 Maret 2027', semester: 2, monthName: 'Maret', weekNumber: 4, type: 'libur' },
   { id: '13', name: 'Tes PSAJ (Penilaian Sumatif Akhir Jenjang)', dateRange: '5 - 10 April 2027', semester: 2, monthName: 'April', weekNumber: 1, type: 'psaj' },
-  { id: '14', name: 'Tes TKA (Kemampuan Akademik) & UKK Kejuruan', dateRange: '19 - 24 April 2027', semester: 2, monthName: 'April', weekNumber: 3, type: 'ukk' },
+  { id: '14a', name: 'Tes TKA (Kemampuan Akademik) & UKK Kejuruan', dateRange: '19 - 24 April 2027', semester: 2, monthName: 'April', weekNumber: 3, type: 'ukk' },
+  { id: '14b', name: 'Uji Kompetensi Keahlian (UKK) Lanjutan', dateRange: '26 - 30 April 2027', semester: 2, monthName: 'April', weekNumber: 4, type: 'ukk' },
+  { id: '14c', name: 'Libur Pasca Ujian Kejuruan', dateRange: '28 - 30 April 2027', semester: 2, monthName: 'April', weekNumber: 5, type: 'libur' },
   { id: '15', name: 'Pengumuman Kelulusan SMK', dateRange: '8 Mei 2027', semester: 2, monthName: 'Mei', weekNumber: 1, type: 'wisuda' },
-  { id: '16', name: 'Wisuda & Pelepasan Siswa Kelas XII', dateRange: '15 Mei 2027', semester: 2, monthName: 'Mei', weekNumber: 2, type: 'wisuda' },
+  { id: '16a', name: 'Wisuda & Pelepasan Siswa Kelas XII', dateRange: '15 Mei 2027', semester: 2, monthName: 'Mei', weekNumber: 2, type: 'wisuda' },
+  { id: '16b', name: 'Hari Libur Nasional (Kenaikan Isa Almasih / Waisak)', dateRange: '20 - 22 Mei 2027', semester: 2, monthName: 'Mei', weekNumber: 3, type: 'libur' },
+  { id: '16c', name: 'Libur Persiapan PSAT & Rapat Kelulusan', dateRange: '24 - 29 Mei 2027', semester: 2, monthName: 'Mei', weekNumber: 4, type: 'libur' },
   { id: '17', name: 'Tes Sumatif Akhir Tahun (PSAT) Genap', dateRange: '1 - 8 Juni 2027', semester: 2, monthName: 'Juni', weekNumber: 1, type: 'psat' },
   { id: '18', name: 'Ujian Susulan & Penerimaan Rapor Genap', dateRange: '14 - 19 Juni 2027', semester: 2, monthName: 'Juni', weekNumber: 2, type: 'remedial' },
-  { id: '19', name: 'Libur Akhir Tahun Pelajaran', dateRange: '21 Juni - 10 Juli 2027', semester: 2, monthName: 'Juni', weekNumber: 4, type: 'libur' },
+  { id: '19a', name: 'Libur Akhir Tahun Pelajaran', dateRange: '21 - 26 Juni 2027', semester: 2, monthName: 'Juni', weekNumber: 3, type: 'libur' },
+  { id: '19b', name: 'Libur Akhir Tahun Pelajaran', dateRange: '28 Juni - 10 Juli 2027', semester: 2, monthName: 'Juni', weekNumber: 4, type: 'libur' },
 ];
 
 export const INITIAL_OBJECTIVES_SEM1: LearningObjective[] = [
@@ -159,7 +167,7 @@ export const INITIAL_OBJECTIVES_SEM1: LearningObjective[] = [
     description: 'Siswa mampu memahami konsep, struktur, dan unsur kebahasaan pada discussion text secara mendalam dengan menunjukkan kemampuan menganalisis isu, argumen pro-kontra, dan simpulan.',
     semester: 1,
     jp: 4,
-    weeklyAllocation: { 'Juli_3': 4 }
+    weeklyAllocation: { 'Juli_4': 4 }
   },
   {
     id: 'tp1-2',
@@ -168,7 +176,7 @@ export const INITIAL_OBJECTIVES_SEM1: LearningObjective[] = [
     description: 'Siswa mampu mengidentifikasi dan mengevaluasi berbagai perspektif dari suatu isu aktual dengan menggunakan keterampilan berpikir kritis (critical thinking) dan landasan informasi yang valid.',
     semester: 1,
     jp: 4,
-    weeklyAllocation: { 'Juli_4': 4 }
+    weeklyAllocation: { 'Juli_5': 4 }
   },
   {
     id: 'tp1-3',
@@ -186,7 +194,7 @@ export const INITIAL_OBJECTIVES_SEM1: LearningObjective[] = [
     description: 'Siswa mampu menyusun discussion text secara mandiri dengan struktur lengkap (issue – arguments for – arguments against – conclusion) dan penggunaan bahasa yang sesuai kaidah academic writing.',
     semester: 1,
     jp: 4,
-    weeklyAllocation: { 'Agustus_3': 4 }
+    weeklyAllocation: { 'Agustus_2': 4 }
   },
   {
     id: 'tp1-5',
@@ -204,7 +212,7 @@ export const INITIAL_OBJECTIVES_SEM1: LearningObjective[] = [
     description: 'Siswa memahami fungsi dan struktur job application letter (opening, body, closing).',
     semester: 1,
     jp: 4,
-    weeklyAllocation: { 'September_1': 4 }
+    weeklyAllocation: { 'September_2': 4 }
   },
   {
     id: 'tp1-7',
@@ -213,7 +221,7 @@ export const INITIAL_OBJECTIVES_SEM1: LearningObjective[] = [
     description: 'Siswa mampu menganalisis contoh surat lamaran kerja untuk mengidentifikasi unsur penting dan bahasa formal yang sesuai.',
     semester: 1,
     jp: 4,
-    weeklyAllocation: { 'September_2': 4 }
+    weeklyAllocation: { 'September_3': 4 }
   },
   {
     id: 'tp1-8',
@@ -222,7 +230,7 @@ export const INITIAL_OBJECTIVES_SEM1: LearningObjective[] = [
     description: 'Siswa mampu memilih informasi diri yang relevan (pengalaman, keterampilan, prestasi) sesuai posisi pekerjaan yang dilamar.',
     semester: 1,
     jp: 4,
-    weeklyAllocation: { 'September_3': 4 }
+    weeklyAllocation: { 'September_4': 4 }
   },
   {
     id: 'tp1-9',
@@ -368,8 +376,8 @@ export const INITIAL_OBJECTIVES_SEM2: LearningObjective[] = [
     code: 'TP 2.8',
     description: 'Memproduksi teks argumentatif dalam bentuk multimodal.',
     semester: 2,
-    jp: 8,
-    weeklyAllocation: { 'Februari_4': 4, 'Maret_1': 4 }
+    jp: 4,
+    weeklyAllocation: { 'Februari_4': 4 }
   },
   {
     id: 'tp2-9',
@@ -378,7 +386,16 @@ export const INITIAL_OBJECTIVES_SEM2: LearningObjective[] = [
     description: 'Mempresentasikan teks argumentatif hasil karya mandiri maupun kelompok dengan santun dan persuasif.',
     semester: 2,
     jp: 4,
-    weeklyAllocation: { 'April_5': 4 }
+    weeklyAllocation: { 'Maret_2': 4 }
+  },
+  {
+    id: 'tp2-10',
+    element: 'Menulis - Mempresentasikan',
+    code: 'TP 2.10',
+    description: 'Mengevaluasi dan merefleksikan efektivitas argumen serta penyampaian ide dalam teks argumentatif.',
+    semester: 2,
+    jp: 4,
+    weeklyAllocation: { 'April_2': 4 }
   }
 ];
 
