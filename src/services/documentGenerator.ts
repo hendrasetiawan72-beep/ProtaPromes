@@ -16,19 +16,22 @@ export function exportAnalisisMingguEfektifExcel(
   const totalWeeksSem1 = sem1.reduce((acc, m) => acc + m.totalWeeks, 0);
   const nonEffSem1 = sem1.reduce((acc, m) => acc + m.nonEffectiveWeeks, 0);
   const effSem1 = sem1.reduce((acc, m) => acc + m.effectiveWeeks, 0);
+  const effDaysSem1 = sem1.reduce((acc, m) => acc + (m.effectiveDays || 0), 0);
 
   const totalWeeksSem2 = sem2.reduce((acc, m) => acc + m.totalWeeks, 0);
   const nonEffSem2 = sem2.reduce((acc, m) => acc + m.nonEffectiveWeeks, 0);
   const effSem2 = sem2.reduce((acc, m) => acc + m.effectiveWeeks, 0);
+  const effDaysSem2 = sem2.reduce((acc, m) => acc + (m.effectiveDays || 0), 0);
 
   const totalNonEffYear = nonEffSem1 + nonEffSem2;
   const totalEffYear = effSem1 + effSem2;
+  const totalEffDaysYear = effDaysSem1 + effDaysSem2;
 
   const hoursSem1 = meta.weeklyHours * effSem1;
   const hoursSem2 = meta.weeklyHours * effSem2;
 
   const data: any[][] = [
-    ['', '', 'PERHITUNGAN MINGGU EFEKTIF'],
+    ['', '', 'PERHITUNGAN MINGGU & HARI EFEKTIF'],
     [],
     ['Mata Diklat', ': ' + meta.subjectName],
     ['Kelas / Semester', ': ' + meta.grade + '/Ganjil & Genap'],
@@ -36,7 +39,7 @@ export function exportAnalisisMingguEfektifExcel(
     ['Tahun', ': ' + meta.academicYear],
     ['Jam per Minggu', ': ' + meta.weeklyHours],
     [],
-    ['No', 'Bulan', 'Jumlah Minggu', 'Minggu Tidak Efektif', 'Minggu Efektif']
+    ['No', 'Bulan', 'Hari Efektif (Putih)', 'Jumlah Minggu', 'Minggu Tidak Efektif', 'Minggu Efektif']
   ];
 
   // Semester 1 rows
@@ -44,26 +47,29 @@ export function exportAnalisisMingguEfektifExcel(
     data.push([
       String(idx + 1).padStart(2, '0'),
       m.monthName,
+      m.effectiveDays ?? 0,
       m.totalWeeks,
       m.nonEffectiveWeeks,
       m.effectiveWeeks
     ]);
   });
-  data.push(['', 'JUMLAH', totalWeeksSem1, nonEffSem1, effSem1]);
+  data.push(['', 'JUMLAH SEMESTER 1', effDaysSem1, totalWeeksSem1, nonEffSem1, effSem1]);
 
   // Semester 2 rows
   sem2.forEach((m, idx) => {
     data.push([
       String(sem1.length + idx + 1).padStart(2, '0'),
       m.monthName,
+      m.effectiveDays ?? 0,
       m.totalWeeks,
       m.nonEffectiveWeeks,
       m.effectiveWeeks
     ]);
   });
-  data.push(['', 'JUMLAH', totalWeeksSem2, nonEffSem2, effSem2]);
+  data.push(['', 'JUMLAH SEMESTER 2', effDaysSem2, totalWeeksSem2, nonEffSem2, effSem2]);
 
   data.push([]);
+  data.push(['', `Total Hari Efektif Belajar (Warna Putih) dalam 1 Tahun adalah ${totalEffDaysYear} hari`]);
   data.push(['', `Jumlah Minggu Tidak Efektif dalam satu tahun adalah ${totalNonEffYear} minggu`]);
   data.push(['', `Jumlah Minggu Efektif dalam satu tahun adalah ${totalEffYear} minggu`]);
   data.push([]);

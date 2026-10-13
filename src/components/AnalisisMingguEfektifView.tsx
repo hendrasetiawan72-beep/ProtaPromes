@@ -29,21 +29,30 @@ export const AnalisisMingguEfektifView: React.FC<AnalisisMingguEfektifViewProps>
   const totalWeeksSem1 = sem1.reduce((sum, m) => sum + m.totalWeeks, 0);
   const nonEffSem1 = sem1.reduce((sum, m) => sum + m.nonEffectiveWeeks, 0);
   const effSem1 = sem1.reduce((sum, m) => sum + m.effectiveWeeks, 0);
+  const effDaysSem1 = sem1.reduce((sum, m) => sum + (m.effectiveDays || 0), 0);
 
   const totalWeeksSem2 = sem2.reduce((sum, m) => sum + m.totalWeeks, 0);
   const nonEffSem2 = sem2.reduce((sum, m) => sum + m.nonEffectiveWeeks, 0);
   const effSem2 = sem2.reduce((sum, m) => sum + m.effectiveWeeks, 0);
+  const effDaysSem2 = sem2.reduce((sum, m) => sum + (m.effectiveDays || 0), 0);
 
   const totalNonEffYear = nonEffSem1 + nonEffSem2;
   const totalEffYear = effSem1 + effSem2;
+  const totalEffDaysYear = effDaysSem1 + effDaysSem2;
 
   // Formula: Jam per minggu x Minggu efektif
   const hoursSem1 = meta.weeklyHours * effSem1;
   const hoursSem2 = meta.weeklyHours * effSem2;
 
-  const handleCellChange = (monthName: string, field: 'totalWeeks' | 'nonEffectiveWeeks', value: number) => {
+  const handleCellChange = (monthName: string, field: 'totalWeeks' | 'nonEffectiveWeeks' | 'effectiveDays', value: number) => {
     const updated = monthAnalysis.map(m => {
       if (m.monthName === monthName) {
+        if (field === 'effectiveDays') {
+          return {
+            ...m,
+            effectiveDays: value,
+          };
+        }
         const total = field === 'totalWeeks' ? value : m.totalWeeks;
         const nonEff = field === 'nonEffectiveWeeks' ? value : m.nonEffectiveWeeks;
         return {
@@ -110,13 +119,13 @@ export const AnalisisMingguEfektifView: React.FC<AnalisisMingguEfektifViewProps>
             }`}
           >
             <Settings2 className="w-3.5 h-3.5" />
-            {isEditingData ? 'Selesai Edit Tabel' : 'Kustomisasi Jumlah Minggu'}
+            {isEditingData ? 'Selesai Edit Tabel' : 'Kustomisasi Data'}
           </button>
 
           <button
             onClick={() => onUpdateMonthAnalysis(INITIAL_MONTH_ANALYSIS)}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300 transition"
-            title="Kembalikan perhitungan minggu efektif ke data standar Kalender Pendidikan"
+            title="Kembalikan perhitungan minggu dan hari efektif ke data standar Kalender Pendidikan"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             Reset Standar Kaldik
@@ -149,8 +158,11 @@ export const AnalisisMingguEfektifView: React.FC<AnalisisMingguEfektifViewProps>
         {/* Title */}
         <div className="text-center mt-5 mb-4">
           <h2 className="text-base sm:text-lg font-bold font-serif uppercase tracking-wider text-black">
-            PERHITUNGAN MINGGU EFEKTIF
+            PERHITUNGAN MINGGU &amp; HARI EFEKTIF
           </h2>
+          <p className="text-[11px] font-sans text-slate-500 mt-0.5 print:hidden">
+            * Hari Efektif Belajar dihitung hanya pada kolom/sel sheet yang berwarna putih (tanpa warna agenda khusus/libur)
+          </p>
         </div>
 
         {/* Metadata info */}
@@ -161,7 +173,7 @@ export const AnalisisMingguEfektifView: React.FC<AnalisisMingguEfektifViewProps>
           </div>
           <div className="grid grid-cols-[160px_1fr] sm:grid-cols-[180px_1fr]">
             <span className="font-medium text-slate-800">Kelas / Semester</span>
-            <span>: {meta.grade}/Ganjil & Genap</span>
+            <span>: {meta.grade}/Ganjil &amp; Genap</span>
           </div>
           <div className="grid grid-cols-[160px_1fr] sm:grid-cols-[180px_1fr]">
             <span className="font-medium text-slate-800">Program Keahlian</span>
@@ -181,25 +193,42 @@ export const AnalisisMingguEfektifView: React.FC<AnalisisMingguEfektifViewProps>
           </div>
         </div>
 
-        {/* Table matching Screenshot 2 */}
+        {/* Table matching Screenshot 2 + Hari Efektif Putih */}
         <div className="overflow-x-auto print:overflow-visible">
           <table className="w-full text-xs sm:text-sm border-collapse border border-black text-center font-sans">
             <thead>
               <tr className="bg-slate-50 font-bold border-b border-black">
-                <th className="border border-black py-2 px-2 w-12">No</th>
-                <th className="border border-black py-2 px-4 text-left">Bulan</th>
-                <th className="border border-black py-2 px-2 w-32">Jumlah Minggu</th>
-                <th className="border border-black py-2 px-2 w-36">Minggu Tidak Efektif</th>
-                <th className="border border-black py-2 px-2 w-32">Minggu Efektif</th>
+                <th className="border border-black py-2 px-1.5 w-10">No</th>
+                <th className="border border-black py-2 px-3 text-left">Bulan</th>
+                <th className="border border-black py-2 px-2 w-28 bg-blue-50/60 text-blue-950" title="Dihitung hanya pada sel/kolom warna putih pada kalender">
+                  Hari Efektif (Putih)
+                </th>
+                <th className="border border-black py-2 px-2 w-28">Jumlah Minggu</th>
+                <th className="border border-black py-2 px-2 w-32">Minggu Tidak Efektif</th>
+                <th className="border border-black py-2 px-2 w-28">Minggu Efektif</th>
               </tr>
             </thead>
             <tbody>
               {/* Semester 1 */}
               {sem1.map((item, idx) => (
                 <tr key={item.monthName} className="hover:bg-slate-50/50">
-                  <td className="border border-black py-1.5 px-2">{String(idx + 1).padStart(2, '0')}</td>
-                  <td className="border border-black py-1.5 px-4 text-left font-medium">
+                  <td className="border border-black py-1.5 px-1.5">{String(idx + 1).padStart(2, '0')}</td>
+                  <td className="border border-black py-1.5 px-3 text-left font-medium">
                     {item.monthName}
+                  </td>
+                  <td className="border border-black py-1.5 px-2 bg-blue-50/30 font-semibold text-blue-900">
+                    {isEditingData ? (
+                      <input
+                        type="number"
+                        min="0"
+                        max="31"
+                        value={item.effectiveDays ?? 0}
+                        onChange={e => handleCellChange(item.monthName, 'effectiveDays', parseInt(e.target.value, 10) || 0)}
+                        className="w-12 text-center border border-slate-300 rounded font-bold"
+                      />
+                    ) : (
+                      `${item.effectiveDays ?? 0} hari`
+                    )}
                   </td>
                   <td className="border border-black py-1.5 px-2">
                     {isEditingData ? (
@@ -235,9 +264,10 @@ export const AnalisisMingguEfektifView: React.FC<AnalisisMingguEfektifViewProps>
                 </tr>
               ))}
               <tr className="bg-slate-100 font-bold border-t-2 border-black">
-                <td colSpan={2} className="border border-black py-1.5 px-4 text-center">
-                  JUMLAH
+                <td colSpan={2} className="border border-black py-1.5 px-3 text-center">
+                  JUMLAH SEMESTER 1
                 </td>
+                <td className="border border-black py-1.5 px-2 text-blue-900">{effDaysSem1} hari</td>
                 <td className="border border-black py-1.5 px-2">{totalWeeksSem1}</td>
                 <td className="border border-black py-1.5 px-2">{nonEffSem1}</td>
                 <td className="border border-black py-1.5 px-2">{effSem1}</td>
@@ -246,9 +276,23 @@ export const AnalisisMingguEfektifView: React.FC<AnalisisMingguEfektifViewProps>
               {/* Semester 2 */}
               {sem2.map((item, idx) => (
                 <tr key={item.monthName} className="hover:bg-slate-50/50">
-                  <td className="border border-black py-1.5 px-2">{String(sem1.length + idx + 1).padStart(2, '0')}</td>
-                  <td className="border border-black py-1.5 px-4 text-left font-medium">
+                  <td className="border border-black py-1.5 px-1.5">{String(sem1.length + idx + 1).padStart(2, '0')}</td>
+                  <td className="border border-black py-1.5 px-3 text-left font-medium">
                     {item.monthName}
+                  </td>
+                  <td className="border border-black py-1.5 px-2 bg-blue-50/30 font-semibold text-blue-900">
+                    {isEditingData ? (
+                      <input
+                        type="number"
+                        min="0"
+                        max="31"
+                        value={item.effectiveDays ?? 0}
+                        onChange={e => handleCellChange(item.monthName, 'effectiveDays', parseInt(e.target.value, 10) || 0)}
+                        className="w-12 text-center border border-slate-300 rounded font-bold"
+                      />
+                    ) : (
+                      `${item.effectiveDays ?? 0} hari`
+                    )}
                   </td>
                   <td className="border border-black py-1.5 px-2">
                     {isEditingData ? (
@@ -284,9 +328,10 @@ export const AnalisisMingguEfektifView: React.FC<AnalisisMingguEfektifViewProps>
                 </tr>
               ))}
               <tr className="bg-slate-100 font-bold border-t-2 border-black">
-                <td colSpan={2} className="border border-black py-1.5 px-4 text-center">
-                  JUMLAH
+                <td colSpan={2} className="border border-black py-1.5 px-3 text-center">
+                  JUMLAH SEMESTER 2
                 </td>
+                <td className="border border-black py-1.5 px-2 text-blue-900">{effDaysSem2} hari</td>
                 <td className="border border-black py-1.5 px-2">{totalWeeksSem2}</td>
                 <td className="border border-black py-1.5 px-2">{nonEffSem2}</td>
                 <td className="border border-black py-1.5 px-2">{effSem2}</td>
@@ -297,6 +342,11 @@ export const AnalisisMingguEfektifView: React.FC<AnalisisMingguEfektifViewProps>
 
         {/* Summary text */}
         <div className="mt-4 text-xs sm:text-sm font-sans space-y-1">
+          <p>
+            Total Hari Efektif Belajar (Warna Putih) dalam satu tahun adalah{' '}
+            <strong className="font-semibold underline decoration-blue-400 text-blue-900">{totalEffDaysYear} hari</strong>
+            {' '}({effDaysSem1} hari Gasal + {effDaysSem2} hari Genap)
+          </p>
           <p>
             Jumlah Minggu Tidak Efektif dalam satu tahun adalah{' '}
             <strong className="font-semibold underline decoration-slate-400">{totalNonEffYear} minggu</strong>
@@ -317,7 +367,7 @@ export const AnalisisMingguEfektifView: React.FC<AnalisisMingguEfektifViewProps>
           </div>
         </div>
 
-        {/* Official Blank Signature Block (No mock graphics/stamps, empty for physical signing) */}
+        {/* Official Blank Signature Block */}
         <SignatureBlock school={school} meta={meta} />
       </div>
     </div>

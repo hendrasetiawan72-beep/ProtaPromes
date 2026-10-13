@@ -113,20 +113,20 @@ export const INITIAL_SUBJECTS: Subject[] = [
 ];
 
 export const INITIAL_MONTH_ANALYSIS: MonthEffectiveBreakdown[] = [
-  // Semester 1 (Gasal) - Total 27 Minggu, 10 Tidak Efektif, 17 Efektif
-  { monthName: 'Juli', semester: 1, totalWeeks: 5, nonEffectiveWeeks: 3, effectiveWeeks: 2, notes: ['Libur Semester Genap', 'MPLS'] },
-  { monthName: 'Agustus', semester: 1, totalWeeks: 4, nonEffectiveWeeks: 1, effectiveWeeks: 3, notes: ['Asesmen Nasional (ANBK)'] },
-  { monthName: 'September', semester: 1, totalWeeks: 4, nonEffectiveWeeks: 1, effectiveWeeks: 3, notes: ['PSTS Gasal'] },
-  { monthName: 'Oktober', semester: 1, totalWeeks: 5, nonEffectiveWeeks: 0, effectiveWeeks: 5, notes: [] },
-  { monthName: 'November', semester: 1, totalWeeks: 4, nonEffectiveWeeks: 0, effectiveWeeks: 4, notes: [] },
-  { monthName: 'Desember', semester: 1, totalWeeks: 5, nonEffectiveWeeks: 5, effectiveWeeks: 0, notes: ['PSAS', 'Ujian Susulan & Remedial', 'Pembagian Rapor', 'Libur Akhir Semester Gasal'] },
-  // Semester 2 (Genap) - Total 25 Minggu, 15 Tidak Efektif, 10 Efektif
-  { monthName: 'Januari', semester: 2, totalWeeks: 4, nonEffectiveWeeks: 0, effectiveWeeks: 4, notes: [] },
-  { monthName: 'Februari', semester: 2, totalWeeks: 4, nonEffectiveWeeks: 0, effectiveWeeks: 4, notes: [] },
-  { monthName: 'Maret', semester: 2, totalWeeks: 4, nonEffectiveWeeks: 3, effectiveWeeks: 1, notes: ['PSTS Genap', 'Libur Menjelang & Hari Raya Idul Fitri 1448 H'] },
-  { monthName: 'April', semester: 2, totalWeeks: 5, nonEffectiveWeeks: 4, effectiveWeeks: 1, notes: ['PSAJ', 'UKK (Uji Kompetensi Keahlian)'] },
-  { monthName: 'Mei', semester: 2, totalWeeks: 4, nonEffectiveWeeks: 4, effectiveWeeks: 0, notes: ['Pengumuman Kelulusan & Wisuda', 'Hari Libur Nasional'] },
-  { monthName: 'Juni', semester: 2, totalWeeks: 4, nonEffectiveWeeks: 4, effectiveWeeks: 0, notes: ['PSAT', 'Ujian Susulan & Rapor', 'Libur Akhir Tahun Pelajaran'] },
+  // Semester 1 (Gasal) - Total 27 Minggu, 10 Tidak Efektif, 17 Efektif | 101 Hari Efektif (Kolom Putih)
+  { monthName: 'Juli', semester: 1, totalWeeks: 5, nonEffectiveWeeks: 3, effectiveWeeks: 2, totalDays: 31, nonEffectiveDays: 19, effectiveDays: 12, notes: ['Libur Semester Genap', 'MPLS'] },
+  { monthName: 'Agustus', semester: 1, totalWeeks: 4, nonEffectiveWeeks: 1, effectiveWeeks: 3, totalDays: 31, nonEffectiveDays: 11, effectiveDays: 20, notes: ['Asesmen Nasional (ANBK)'] },
+  { monthName: 'September', semester: 1, totalWeeks: 4, nonEffectiveWeeks: 1, effectiveWeeks: 3, totalDays: 30, nonEffectiveDays: 11, effectiveDays: 19, notes: ['PSTS Gasal'] },
+  { monthName: 'Oktober', semester: 1, totalWeeks: 5, nonEffectiveWeeks: 0, effectiveWeeks: 5, totalDays: 31, nonEffectiveDays: 5, effectiveDays: 26, notes: [] },
+  { monthName: 'November', semester: 1, totalWeeks: 4, nonEffectiveWeeks: 0, effectiveWeeks: 4, totalDays: 30, nonEffectiveDays: 6, effectiveDays: 24, notes: [] },
+  { monthName: 'Desember', semester: 1, totalWeeks: 5, nonEffectiveWeeks: 5, effectiveWeeks: 0, totalDays: 31, nonEffectiveDays: 31, effectiveDays: 0, notes: ['PSAS', 'Ujian Susulan & Remedial', 'Pembagian Rapor', 'Libur Akhir Semester Gasal'] },
+  // Semester 2 (Genap) - Total 25 Minggu, 15 Tidak Efektif, 10 Efektif | 61 Hari Efektif (Kolom Putih)
+  { monthName: 'Januari', semester: 2, totalWeeks: 4, nonEffectiveWeeks: 0, effectiveWeeks: 4, totalDays: 31, nonEffectiveDays: 7, effectiveDays: 24, notes: [] },
+  { monthName: 'Februari', semester: 2, totalWeeks: 4, nonEffectiveWeeks: 0, effectiveWeeks: 4, totalDays: 28, nonEffectiveDays: 6, effectiveDays: 22, notes: [] },
+  { monthName: 'Maret', semester: 2, totalWeeks: 4, nonEffectiveWeeks: 3, effectiveWeeks: 1, totalDays: 31, nonEffectiveDays: 23, effectiveDays: 8, notes: ['PSTS Genap', 'Libur Menjelang & Hari Raya Idul Fitri 1448 H'] },
+  { monthName: 'April', semester: 2, totalWeeks: 5, nonEffectiveWeeks: 4, effectiveWeeks: 1, totalDays: 30, nonEffectiveDays: 23, effectiveDays: 7, notes: ['PSAJ', 'UKK (Uji Kompetensi Keahlian)'] },
+  { monthName: 'Mei', semester: 2, totalWeeks: 4, nonEffectiveWeeks: 4, effectiveWeeks: 0, totalDays: 31, nonEffectiveDays: 31, effectiveDays: 0, notes: ['Pengumuman Kelulusan & Wisuda', 'Hari Libur Nasional'] },
+  { monthName: 'Juni', semester: 2, totalWeeks: 4, nonEffectiveWeeks: 4, effectiveWeeks: 0, totalDays: 30, nonEffectiveDays: 30, effectiveDays: 0, notes: ['PSAT', 'Ujian Susulan & Rapor', 'Libur Akhir Tahun Pelajaran'] },
 ];
 
 export const INITIAL_KALDIK_EVENTS: KaldikEvent[] = [

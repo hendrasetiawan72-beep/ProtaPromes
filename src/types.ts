@@ -45,6 +45,9 @@ export interface MonthEffectiveBreakdown {
   totalWeeks: number;
   nonEffectiveWeeks: number;
   effectiveWeeks: number;
+  totalDays: number;
+  effectiveDays: number; // Hari Efektif (hanya dihitung pada sel/kolom warna putih)
+  nonEffectiveDays: number; // Hari Tidak Efektif (sel/kolom dengan warna/agenda)
   notes: string[];
 }
 

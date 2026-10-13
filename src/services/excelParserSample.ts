@@ -1,4 +1,5 @@
 import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 
 /**
  * Downloads a sample Jadwal KBM Excel template with real SMK Muhammadiyah Bawang data
@@ -89,35 +90,151 @@ export function downloadSampleKbmFile(): void {
 }
 
 /**
- * Downloads sample KALDIK Excel template
+ * Downloads sample KALDIK Excel template with colored matrix and white effective days
  */
-export function downloadSampleKaldikFile(): void {
-  const wb = XLSX.utils.book_new();
+export async function downloadSampleKaldikFile(): Promise<void> {
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'SMK Muhammadiyah Bawang';
+  wb.created = new Date();
 
-  const kaldikSummaryData = [
-    ['PERHITUNGAN MINGGU EFEKTIF'],
+  // -------------------------------------------------------------------------
+  // SHEET 1: KALDIK Matrix (Warna)
+  // Sel warna PUTIH = Hari Efektif Belajar (HEB)
+  // Sel BERWARNA = Libur / Agenda Khusus / Ujian (Tidak Efektif)
+  // -------------------------------------------------------------------------
+  const wsMatrix = wb.addWorksheet('KALDIK Matrix (Warna)');
+
+  wsMatrix.addRow(['KALENDER PENDIDIKAN DAN PERHITUNGAN HARI EFEKTIF (SMK BAWANG)']);
+  wsMatrix.addRow(['Keterangan: Sel warna PUTIH = Hari Efektif Belajar (HEB). Sel BERWARNA = Libur / Agenda Khusus / Ujian.']);
+  wsMatrix.addRow([]);
+
+  // Header row
+  const headerRow = wsMatrix.addRow([
+    'No',
+    'Bulan',
+    ...Array.from({ length: 31 }, (_, i) => i + 1),
+    'Hari Efektif (Putih)',
+    'Hari Tdk Efektif',
+    'Total Hari',
+    'Jml Minggu',
+    'Minggu Efektif'
+  ]);
+
+  headerRow.font = { bold: true };
+  headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
+
+  // Months definition
+  const monthsData = [
+    { name: 'Juli', sem: 1, totalDays: 31, whiteDays: 12, nonEffDays: 19, totalWeeks: 5, effWeeks: 2, coloredRanges: [[1, 12], [15, 20]] }, // Libur Genap & MPLS
+    { name: 'Agustus', sem: 1, totalDays: 31, whiteDays: 20, nonEffDays: 11, totalWeeks: 4, effWeeks: 3, coloredRanges: [[17, 17], [18, 23]] }, // HUT RI & ANBK
+    { name: 'September', sem: 1, totalDays: 30, whiteDays: 19, nonEffDays: 11, totalWeeks: 4, effWeeks: 3, coloredRanges: [[1, 6]] }, // PSTS Gasal
+    { name: 'Oktober', sem: 1, totalDays: 31, whiteDays: 26, nonEffDays: 5, totalWeeks: 5, effWeeks: 5, coloredRanges: [] }, // Full KBM
+    { name: 'November', sem: 1, totalDays: 30, whiteDays: 24, nonEffDays: 6, totalWeeks: 4, effWeeks: 4, coloredRanges: [] }, // Full KBM
+    { name: 'Desember', sem: 1, totalDays: 31, whiteDays: 0, nonEffDays: 31, totalWeeks: 5, effWeeks: 0, coloredRanges: [[1, 31]] }, // PSAS, Remedial, Rapor, Libur
+    { name: 'Januari', sem: 2, totalDays: 31, whiteDays: 24, nonEffDays: 7, totalWeeks: 4, effWeeks: 4, coloredRanges: [[1, 3]] }, // Masuk Awal & Libur Tahun Baru
+    { name: 'Februari', sem: 2, totalDays: 28, whiteDays: 22, nonEffDays: 6, totalWeeks: 4, effWeeks: 4, coloredRanges: [] }, // Full KBM
+    { name: 'Maret', sem: 2, totalDays: 31, whiteDays: 8, nonEffDays: 23, totalWeeks: 4, effWeeks: 1, coloredRanges: [[1, 6], [15, 27]] }, // PSTS & Idul Fitri
+    { name: 'April', sem: 2, totalDays: 30, whiteDays: 7, nonEffDays: 23, totalWeeks: 5, effWeeks: 1, coloredRanges: [[5, 10], [19, 24]] }, // PSAJ & UKK
+    { name: 'Mei', sem: 2, totalDays: 31, whiteDays: 0, nonEffDays: 31, totalWeeks: 4, effWeeks: 0, coloredRanges: [[1, 31]] }, // Kelulusan & Wisuda
+    { name: 'Juni', sem: 2, totalDays: 30, whiteDays: 0, nonEffDays: 30, totalWeeks: 4, effWeeks: 0, coloredRanges: [[1, 30]] }, // PSAT, Rapor, Libur
+  ];
+
+  monthsData.forEach((m, idx) => {
+    const rowValues: any[] = [
+      String(idx + 1).padStart(2, '0'),
+      m.name
+    ];
+
+    // Dates 1..31
+    for (let d = 1; d <= 31; d++) {
+      if (d <= m.totalDays) {
+        rowValues.push(d);
+      } else {
+        rowValues.push('-');
+      }
+    }
+
+    rowValues.push(m.whiteDays);
+    rowValues.push(m.nonEffDays);
+    rowValues.push(m.totalDays);
+    rowValues.push(m.totalWeeks);
+    rowValues.push(m.effWeeks);
+
+    const row = wsMatrix.addRow(rowValues);
+    row.getCell(2).font = { bold: true };
+
+    // Apply colors to date cells
+    for (let d = 1; d <= 31; d++) {
+      const cell = row.getCell(d + 2);
+      cell.alignment = { horizontal: 'center' };
+
+      if (d > m.totalDays) {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0E0E0' } };
+        continue;
+      }
+
+      // Check if day falls in any colored range
+      const isColored = m.coloredRanges.some(([start, end]) => d >= start && d <= end);
+
+      if (isColored) {
+        // Colored cell: Holiday / Exam / Agenda
+        let argb = 'FFFF9999'; // default light red
+        if (m.name === 'Juli' && d >= 15 && d <= 20) argb = 'FFAAFFAA'; // MPLS (Green)
+        else if (m.name === 'Agustus' && d >= 18 && d <= 23) argb = 'FF88DDFF'; // ANBK (Cyan)
+        else if (m.name.includes('Maret') && d >= 1 && d <= 6) argb = 'FFFFFF99'; // PSTS (Yellow)
+        else if (m.name === 'April' && d >= 19 && d <= 24) argb = 'FFFFCC88'; // UKK (Orange)
+
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb }
+        };
+      } else {
+        // Pure WHITE cell: Hari Efektif Belajar
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFFFFFFF' }
+        };
+      }
+    }
+
+    // Highlight summary columns
+    row.getCell(34).font = { bold: true }; // Hari Efektif Putih
+    row.getCell(34).alignment = { horizontal: 'center' };
+    row.getCell(38).font = { bold: true }; // Minggu Efektif
+    row.getCell(38).alignment = { horizontal: 'center' };
+  });
+
+  // -------------------------------------------------------------------------
+  // SHEET 2: per mgg efektif (Tabel Rekapitulasi)
+  // -------------------------------------------------------------------------
+  const wsSummary = wb.addWorksheet('per mgg efektif');
+  const summaryRows = [
+    ['PERHITUNGAN MINGGU & HARI EFEKTIF'],
     ['Mata Diklat', ': Bahasa Inggris'],
     ['Kelas / Semester', ': XII/Ganjil & Genap'],
     ['Program Keahlian', ': Semua Program Keahlian'],
     ['Tahun', ': 2026/2027'],
     ['Jam per Minggu', ': 4'],
     [],
-    ['No', 'Bulan', 'Jumlah Minggu', 'Minggu Tidak Efektif', 'Minggu Efektif'],
-    ['01', 'Juli', 5, 3, 2],
-    ['02', 'Agustus', 4, 1, 3],
-    ['03', 'September', 4, 1, 3],
-    ['04', 'Oktober', 5, 0, 5],
-    ['05', 'November', 4, 0, 4],
-    ['06', 'Desember', 5, 5, 0],
-    ['', 'JUMLAH', 27, 10, 17],
-    ['07', 'Januari', 4, 0, 4],
-    ['08', 'Februari', 4, 0, 4],
-    ['09', 'Maret', 4, 3, 1],
-    ['10', 'April', 5, 4, 1],
-    ['11', 'Mei', 4, 4, 0],
-    ['12', 'Juni', 4, 4, 0],
-    ['', 'JUMLAH', 25, 15, 10],
+    ['No', 'Bulan', 'Hari Efektif (Putih)', 'Jumlah Minggu', 'Minggu Tidak Efektif', 'Minggu Efektif'],
+    ['01', 'Juli', 12, 5, 3, 2],
+    ['02', 'Agustus', 20, 4, 1, 3],
+    ['03', 'September', 19, 4, 1, 3],
+    ['04', 'Oktober', 26, 5, 0, 5],
+    ['05', 'November', 24, 4, 0, 4],
+    ['06', 'Desember', 0, 5, 5, 0],
+    ['', 'JUMLAH SEMESTER 1', 101, 27, 10, 17],
+    ['07', 'Januari', 24, 4, 0, 4],
+    ['08', 'Februari', 22, 4, 0, 4],
+    ['09', 'Maret', 8, 4, 3, 1],
+    ['10', 'April', 7, 5, 4, 1],
+    ['11', 'Mei', 0, 4, 4, 0],
+    ['12', 'Juni', 0, 4, 4, 0],
+    ['', 'JUMLAH SEMESTER 2', 61, 25, 15, 10],
     [],
+    ['Total Hari Efektif Belajar (Warna Putih) dalam 1 Tahun = 162 hari'],
     ['Jumlah Minggu Tidak Efektif dalam satu tahun adalah 25 minggu'],
     ['Jumlah Minggu Efektif dalam satu tahun adalah 27 minggu'],
     [],
@@ -139,7 +256,17 @@ export function downloadSampleKaldikFile(): void {
     ['* 21 Juni - 10 Juli 2027 : Libur Akhir Tahun Pelajaran']
   ];
 
-  const ws = XLSX.utils.aoa_to_sheet(kaldikSummaryData);
-  XLSX.utils.book_append_sheet(wb, ws, 'per mgg efektif');
-  XLSX.writeFile(wb, 'Format_KALDIK_SMK_Bawang.xlsx');
+  summaryRows.forEach(r => wsSummary.addRow(r));
+
+  // Trigger browser download
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'Format_KALDIK_SMK_Bawang.xlsx';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }

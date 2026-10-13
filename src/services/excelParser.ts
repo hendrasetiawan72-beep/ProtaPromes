@@ -1,4 +1,5 @@
 import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { Teacher, Subject, ScheduleSlot, MonthEffectiveBreakdown, KaldikEvent } from '../types';
 import { TIME_SLOTS } from '../data/initialData';
 
@@ -23,6 +24,8 @@ export interface ParseKaldikResult {
   subjectName?: string;
   totalEffectiveSem1: number;
   totalEffectiveSem2: number;
+  totalEffectiveDaysSem1: number;
+  totalEffectiveDaysSem2: number;
 }
 
 /**
@@ -531,7 +534,28 @@ export async function parseJadwalKBM(input: File | ArrayBuffer | Uint8Array): Pr
 }
 
 /**
+ * Checks whether an Excel cell is white or uncolored (effective school day)
+ */
+function isCellWhiteOrUncolored(cell: ExcelJS.Cell | undefined): boolean {
+  if (!cell) return true;
+  if (!cell.fill) return true;
+  const fill = cell.fill as any;
+  if (fill.type === 'pattern') {
+    if (fill.pattern === 'none') return true;
+    if (!fill.fgColor) return true;
+    const argb = String(fill.fgColor.argb || '').toUpperCase();
+    if (argb === 'FFFFFFFF' || argb === 'FFFFFF' || argb === '00FFFFFF') return true;
+    if (fill.fgColor.theme === 0 && (fill.fgColor.tint === undefined || fill.fgColor.tint === 0 || fill.fgColor.tint === 1)) {
+      return true;
+    }
+    return false; // Colored cell (holiday, agenda, or exam)
+  }
+  return true;
+}
+
+/**
  * Fully dynamic KALDIK Excel parser
+ * - Reads sheet calendar matrix and calculates Hari Efektif ONLY from white cells/columns per month
  * - Reads sheet "per mgg efektif" (or equivalent) for Effective Weeks counts
  * - Extracts all notes starting with '*' as important events
  * - Automatically detects academic year, weekly hours, and subject name
@@ -541,6 +565,7 @@ export async function parseKaldikExcel(input: File | ArrayBuffer | Uint8Array): 
     input instanceof ArrayBuffer || input instanceof Uint8Array
       ? input
       : await input.arrayBuffer();
+
   const workbook = XLSX.read(data, { type: 'array' });
   const sheetNames = workbook.SheetNames;
 
@@ -550,8 +575,131 @@ export async function parseKaldikExcel(input: File | ArrayBuffer | Uint8Array): 
   let detectedWeeklyHours: number | undefined = undefined;
   let detectedSubjectName: string | undefined = undefined;
 
+  const standardMonths: Array<{
+    name: string;
+    semester: 1 | 2;
+    defaultWeeks: number;
+    defaultNonEff: number;
+    defaultEff: number;
+    defaultTotalDays: number;
+    defaultNonEffDays: number;
+    defaultEffDays: number;
+    notes?: string[];
+  }> = [
+    { name: 'Juli', semester: 1, defaultWeeks: 5, defaultNonEff: 3, defaultEff: 2, defaultTotalDays: 31, defaultNonEffDays: 19, defaultEffDays: 12, notes: ['Libur Sem Genap', 'MPLS'] },
+    { name: 'Agustus', semester: 1, defaultWeeks: 4, defaultNonEff: 1, defaultEff: 3, defaultTotalDays: 31, defaultNonEffDays: 11, defaultEffDays: 20, notes: ['Asesmen Nasional (ANBK)'] },
+    { name: 'September', semester: 1, defaultWeeks: 4, defaultNonEff: 1, defaultEff: 3, defaultTotalDays: 30, defaultNonEffDays: 11, defaultEffDays: 19, notes: ['PSTS Gasal'] },
+    { name: 'Oktober', semester: 1, defaultWeeks: 5, defaultNonEff: 0, defaultEff: 5, defaultTotalDays: 31, defaultNonEffDays: 5, defaultEffDays: 26, notes: [] },
+    { name: 'November', semester: 1, defaultWeeks: 4, defaultNonEff: 0, defaultEff: 4, defaultTotalDays: 30, defaultNonEffDays: 6, defaultEffDays: 24, notes: [] },
+    { name: 'Desember', semester: 1, defaultWeeks: 5, defaultNonEff: 5, defaultEff: 0, defaultTotalDays: 31, defaultNonEffDays: 31, defaultEffDays: 0, notes: ['PSAS', 'Remedial', 'Rapor', 'Libur Gasal'] },
+    { name: 'Januari', semester: 2, defaultWeeks: 4, defaultNonEff: 0, defaultEff: 4, defaultTotalDays: 31, defaultNonEffDays: 7, defaultEffDays: 24, notes: [] },
+    { name: 'Februari', semester: 2, defaultWeeks: 4, defaultNonEff: 0, defaultEff: 4, defaultTotalDays: 28, defaultNonEffDays: 6, defaultEffDays: 22, notes: [] },
+    { name: 'Maret', semester: 2, defaultWeeks: 4, defaultNonEff: 3, defaultEff: 1, defaultTotalDays: 31, defaultNonEffDays: 23, defaultEffDays: 8, notes: ['PSTS Genap', 'Libur Hari Raya Idul Fitri 1448 H'] },
+    { name: 'April', semester: 2, defaultWeeks: 5, defaultNonEff: 4, defaultEff: 1, defaultTotalDays: 30, defaultNonEffDays: 23, defaultEffDays: 7, notes: ['PSAJ', 'UKK'] },
+    { name: 'Mei', semester: 2, defaultWeeks: 4, defaultNonEff: 4, defaultEff: 0, defaultTotalDays: 31, defaultNonEffDays: 31, defaultEffDays: 0, notes: ['Kelulusan', 'Wisuda'] },
+    { name: 'Juni', semester: 2, defaultWeeks: 4, defaultNonEff: 4, defaultEff: 0, defaultTotalDays: 30, defaultNonEffDays: 30, defaultEffDays: 0, notes: ['PSAT', 'Remedial & Rapor', 'Libur Akhir Tahun'] },
+  ];
+
   // -------------------------------------------------------------------------
-  // 1. SCAN ALL SHEETS FOR ACADEMIC YEAR, SUBJECT, AND WEEKLY HOURS
+  // 1. SCAN EXCEL CELLS USING EXCELJS: COUNT EFFECTIVE DAYS ONLY ON WHITE CELLS
+  // -------------------------------------------------------------------------
+  const detectedDaysByMonth: Record<string, { whiteDays: number; coloredDays: number; totalDays: number }> = {};
+
+  try {
+    const exceljsWb = new ExcelJS.Workbook();
+    await exceljsWb.xlsx.load(data as any);
+
+    exceljsWb.eachSheet((worksheet) => {
+      // Horizontal row scan: row has month name, columns have dates 1..31
+      worksheet.eachRow((row) => {
+        standardMonths.forEach(sm => {
+          let monthCol = -1;
+          row.eachCell((cell, colNumber) => {
+            const str = String(cell.value || '').trim().toLowerCase();
+            if (str === sm.name.toLowerCase() || (str.startsWith(sm.name.toLowerCase().substring(0, 3)) && str.length <= 15)) {
+              monthCol = colNumber;
+            }
+          });
+
+          if (monthCol !== -1) {
+            let whiteCount = 0;
+            let coloredCount = 0;
+
+            row.eachCell((cell, colNumber) => {
+              if (colNumber === monthCol) return;
+              const val = cell.value;
+              const num = typeof val === 'number' ? val : parseInt(String(val || '').trim(), 10);
+              const isDateCell = (!isNaN(num) && num >= 1 && num <= 31) || (colNumber > monthCol && colNumber <= monthCol + 35);
+              if (isDateCell) {
+                if (isCellWhiteOrUncolored(cell)) {
+                  whiteCount++;
+                } else {
+                  coloredCount++;
+                }
+              }
+            });
+
+            if (whiteCount > 0 || coloredCount > 0) {
+              const tot = whiteCount + coloredCount;
+              if (!detectedDaysByMonth[sm.name] || (tot >= 20 && tot <= 32)) {
+                detectedDaysByMonth[sm.name] = {
+                  whiteDays: whiteCount,
+                  coloredDays: coloredCount,
+                  totalDays: tot,
+                };
+              }
+            }
+          }
+        });
+      });
+
+      // Vertical column scan: header has month name, rows below have dates 1..31
+      const colMonthMap: Record<number, string> = {};
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber > 12) return;
+        row.eachCell((cell, colNumber) => {
+          const val = String(cell.value || '').trim().toLowerCase();
+          const matched = standardMonths.find(sm => sm.name.toLowerCase() === val || (val.startsWith(sm.name.toLowerCase().substring(0, 3)) && val.length <= 10));
+          if (matched) {
+            colMonthMap[colNumber] = matched.name;
+          }
+        });
+      });
+
+      if (Object.keys(colMonthMap).length >= 3) {
+        Object.entries(colMonthMap).forEach(([colStr, mName]) => {
+          const colNum = parseInt(colStr, 10);
+          let whiteCount = 0;
+          let coloredCount = 0;
+          worksheet.eachRow((row, rowNumber) => {
+            if (rowNumber <= 12) return;
+            const cell = row.getCell(colNum);
+            const val = cell.value;
+            const num = typeof val === 'number' ? val : parseInt(String(val || '').trim(), 10);
+            if (!isNaN(num) && num >= 1 && num <= 31) {
+              if (isCellWhiteOrUncolored(cell)) {
+                whiteCount++;
+              } else {
+                coloredCount++;
+              }
+            }
+          });
+          if (whiteCount > 0 || coloredCount > 0) {
+            detectedDaysByMonth[mName] = {
+              whiteDays: whiteCount,
+              coloredDays: coloredCount,
+              totalDays: whiteCount + coloredCount,
+            };
+          }
+        });
+      }
+    });
+  } catch (err) {
+    console.warn('ExcelJS cell color scanning fallback to XLSX:', err);
+  }
+
+  // -------------------------------------------------------------------------
+  // 2. SCAN ALL SHEETS FOR ACADEMIC YEAR, SUBJECT, AND WEEKLY HOURS
   // -------------------------------------------------------------------------
   for (const sName of sheetNames) {
     const sheet = workbook.Sheets[sName];
@@ -586,7 +734,7 @@ export async function parseKaldikExcel(input: File | ArrayBuffer | Uint8Array): 
   }
 
   // -------------------------------------------------------------------------
-  // 2. LOCATE SHEET "per mgg efektif" FOR EFFECTIVE WEEKS TABLE
+  // 3. LOCATE SHEET "per mgg efektif" FOR EFFECTIVE WEEKS TABLE
   // -------------------------------------------------------------------------
   const targetSheetName = sheetNames.find(s => {
     const lower = s.toLowerCase();
@@ -604,29 +752,6 @@ export async function parseKaldikExcel(input: File | ArrayBuffer | Uint8Array): 
     }));
   }) || sheetNames[0];
 
-  const standardMonths: Array<{
-    name: string;
-    semester: 1 | 2;
-    defaultWeeks: number;
-    defaultNonEff: number;
-    defaultEff: number;
-    notes?: string[];
-  }> = [
-    { name: 'Juli', semester: 1, defaultWeeks: 5, defaultNonEff: 3, defaultEff: 2, notes: ['Libur Sem Genap', 'MPLS'] },
-    { name: 'Agustus', semester: 1, defaultWeeks: 4, defaultNonEff: 1, defaultEff: 3, notes: ['Asesmen Nasional (ANBK)'] },
-    { name: 'September', semester: 1, defaultWeeks: 4, defaultNonEff: 1, defaultEff: 3, notes: ['PSTS Gasal'] },
-    { name: 'Oktober', semester: 1, defaultWeeks: 5, defaultNonEff: 0, defaultEff: 5, notes: [] },
-    { name: 'November', semester: 1, defaultWeeks: 4, defaultNonEff: 0, defaultEff: 4, notes: [] },
-    { name: 'Desember', semester: 1, defaultWeeks: 5, defaultNonEff: 5, defaultEff: 0, notes: ['PSAS', 'Remedial', 'Rapor', 'Libur Gasal'] },
-    { name: 'Januari', semester: 2, defaultWeeks: 4, defaultNonEff: 0, defaultEff: 4, notes: [] },
-    { name: 'Februari', semester: 2, defaultWeeks: 4, defaultNonEff: 0, defaultEff: 4, notes: [] },
-    { name: 'Maret', semester: 2, defaultWeeks: 4, defaultNonEff: 3, defaultEff: 1, notes: ['PSTS Genap', 'Libur Hari Raya Idul Fitri 1448 H'] },
-    { name: 'April', semester: 2, defaultWeeks: 5, defaultNonEff: 4, defaultEff: 1, notes: ['PSAJ', 'UKK'] },
-    { name: 'Mei', semester: 2, defaultWeeks: 4, defaultNonEff: 4, defaultEff: 0, notes: ['Kelulusan', 'Wisuda'] },
-    { name: 'Juni', semester: 2, defaultWeeks: 4, defaultNonEff: 4, defaultEff: 0, notes: ['PSAT', 'Remedial & Rapor', 'Libur Akhir Tahun'] },
-  ];
-
-  // Try candidate sheets or all sheets in workbook
   const candidateSheets = [
     targetSheetName,
     ...sheetNames.filter(s => s !== targetSheetName)
@@ -643,6 +768,7 @@ export async function parseKaldikExcel(input: File | ArrayBuffer | Uint8Array): 
     let colTotal = -1;
     let colNonEff = -1;
     let colEff = -1;
+    let colEffDays = -1;
 
     for (let r = 0; r < Math.min(rows.length, 25); r++) {
       const row = rows[r];
@@ -656,6 +782,8 @@ export async function parseKaldikExcel(input: File | ArrayBuffer | Uint8Array): 
           colTotal = c;
         } else if (str.includes('tidakefektif') || str.includes('nonefektif') || str.includes('tdkefektif')) {
           colNonEff = c;
+        } else if (str.includes('hariefektif') || str.includes('hbe') || str.includes('heb') || str.includes('hariwarna')) {
+          colEffDays = c;
         } else if (str.includes('efektif') && !str.includes('tidak') && !str.includes('non') && !str.includes('tdk')) {
           colEff = c;
         }
@@ -666,10 +794,10 @@ export async function parseKaldikExcel(input: File | ArrayBuffer | Uint8Array): 
     // Map each standard month from table rows
     standardMonths.forEach(mObj => {
       if (monthAnalysis.some(m => m.monthName.toLowerCase() === mObj.name.toLowerCase())) {
-        return; // already found from earlier sheet
+        return; // already found
       }
 
-      let foundData: { totalWeeks: number; nonEffectiveWeeks: number; effectiveWeeks: number; notes: string[] } | null = null;
+      let foundData: { totalWeeks: number; nonEffectiveWeeks: number; effectiveWeeks: number; effectiveDays?: number; notes: string[] } | null = null;
 
       for (const row of rows) {
         if (!Array.isArray(row)) continue;
@@ -686,12 +814,14 @@ export async function parseKaldikExcel(input: File | ArrayBuffer | Uint8Array): 
             const tot = parseInt(String(row[colTotal] || '').replace(/\D/g, ''), 10);
             const eff = parseInt(String(row[colEff] || '').replace(/\D/g, ''), 10);
             const non = colNonEff !== -1 ? parseInt(String(row[colNonEff] || '').replace(/\D/g, ''), 10) : NaN;
+            const effD = colEffDays !== -1 ? parseInt(String(row[colEffDays] || '').replace(/\D/g, ''), 10) : undefined;
 
             if (!isNaN(tot) && !isNaN(eff)) {
               foundData = {
                 totalWeeks: tot,
                 nonEffectiveWeeks: isNaN(non) ? Math.max(0, tot - eff) : non,
                 effectiveWeeks: eff,
+                effectiveDays: !isNaN(effD as any) ? effD : undefined,
                 notes: [],
               };
             }
@@ -706,7 +836,6 @@ export async function parseKaldikExcel(input: File | ArrayBuffer | Uint8Array): 
 
             if (numbersAfter.length >= 3) {
               const [n1, n2, n3] = numbersAfter;
-              // Check if n1 is sum of n2+n3 (total, nonEff, eff)
               if (n1 === n2 + n3) {
                 foundData = { totalWeeks: n1, nonEffectiveWeeks: n2, effectiveWeeks: n3, notes: [] };
               } else if (n3 === n1 + n2) {
@@ -745,12 +874,21 @@ export async function parseKaldikExcel(input: File | ArrayBuffer | Uint8Array): 
       }
 
       if (foundData) {
+        // Integrate white-cell counted days
+        const whiteData = detectedDaysByMonth[mObj.name];
+        const effDays = whiteData ? whiteData.whiteDays : (foundData.effectiveDays ?? mObj.defaultEffDays);
+        const nonEffDays = whiteData ? whiteData.coloredDays : mObj.defaultNonEffDays;
+        const totDays = whiteData ? whiteData.totalDays : mObj.defaultTotalDays;
+
         monthAnalysis.push({
           monthName: mObj.name,
           semester: mObj.semester,
           totalWeeks: foundData.totalWeeks,
           nonEffectiveWeeks: foundData.nonEffectiveWeeks,
           effectiveWeeks: foundData.effectiveWeeks,
+          totalDays: totDays,
+          effectiveDays: effDays,
+          nonEffectiveDays: nonEffDays,
           notes: foundData.notes.length > 0 ? foundData.notes : (mObj.notes || []),
         });
       }
@@ -758,7 +896,7 @@ export async function parseKaldikExcel(input: File | ArrayBuffer | Uint8Array): 
   }
 
   // -------------------------------------------------------------------------
-  // 3. EXTRACT ALL NOTES STARTING WITH '*' AS IMPORTANT EVENTS
+  // 4. EXTRACT ALL NOTES STARTING WITH '*' AS IMPORTANT EVENTS
   // -------------------------------------------------------------------------
   for (const sName of sheetNames) {
     const sheet = workbook.Sheets[sName];
@@ -774,14 +912,12 @@ export async function parseKaldikExcel(input: File | ArrayBuffer | Uint8Array): 
 
         // Check if cell contains '*'
         if (cellStr.includes('*')) {
-          // Split by newline or '*' to handle multiple note bullet points
           const rawItems = cellStr
             .split(/[\r\n*]+/)
             .map(s => s.trim())
             .filter(s => s.length > 3);
 
           for (const item of rawItems) {
-            // Remove leading bullet marks or numbers
             const cleaned = item.replace(/^[\s*\-•:.]+/, '').trim();
             if (cleaned.length < 4) continue;
 
@@ -817,11 +953,9 @@ export async function parseKaldikExcel(input: File | ArrayBuffer | Uint8Array): 
             else if (lower.includes('november') || lower.includes('nov')) { targetMonth = 'November'; semester = 1; }
             else if (lower.includes('desember') || lower.includes('des')) { targetMonth = 'Desember'; semester = 1; }
 
-            // Extract date part (e.g. "15 - 20 Juli 2026")
             const dateMatch = cleaned.match(/\d{1,2}(?:\s*-\s*\d{1,2})?\s+(?:Januari|Februari|Maret|April|Mei|Juni|Juli|Agustus|September|Oktober|November|Desember|\bJan\b|\bFeb\b|\bMar\b|\bApr\b|\bMei\b|\bJun\b|\bJul\b|\bAgu\b|\bSep\b|\bOkt\b|\bNov\b|\bDes\b)(?:\s+\d{4})?/i);
             const dateRange = dateMatch ? dateMatch[0] : `${targetMonth}`;
 
-            // Add event if not duplicate
             if (!events.some(ev => ev.name.toLowerCase() === cleaned.toLowerCase())) {
               events.push({
                 id: `ev_${events.length + 1}`,
@@ -834,10 +968,8 @@ export async function parseKaldikExcel(input: File | ArrayBuffer | Uint8Array): 
                 description: cleaned,
               });
 
-              // Also link this note into monthAnalysis.notes
               const targetAnalysis = monthAnalysis.find(m => m.monthName.toLowerCase() === targetMonth.toLowerCase());
               if (targetAnalysis) {
-                // Short note summary (e.g. "MPLS", "PSTS", "Libur")
                 const shortNote = cleaned.split(':')[1]?.trim() || cleaned;
                 if (!targetAnalysis.notes.includes(shortNote)) {
                   targetAnalysis.notes.push(shortNote.substring(0, 40));
@@ -851,7 +983,7 @@ export async function parseKaldikExcel(input: File | ArrayBuffer | Uint8Array): 
   }
 
   // -------------------------------------------------------------------------
-  // 4. FALLBACK ROBUST DEFAULTS IF SHEET DATA WAS INCOMPLETE
+  // 5. FALLBACK ROBUST DEFAULTS IF SHEET DATA WAS INCOMPLETE
   // -------------------------------------------------------------------------
   if (monthAnalysis.length < 12) {
     const existingMap = new Map(monthAnalysis.map(m => [m.monthName.toLowerCase(), m]));
@@ -862,12 +994,16 @@ export async function parseKaldikExcel(input: File | ArrayBuffer | Uint8Array): 
       if (exist) {
         completeAnalysis.push(exist);
       } else {
+        const whiteData = detectedDaysByMonth[sm.name];
         completeAnalysis.push({
           monthName: sm.name,
           semester: sm.semester,
           totalWeeks: sm.defaultWeeks,
           nonEffectiveWeeks: sm.defaultNonEff,
           effectiveWeeks: sm.defaultEff,
+          totalDays: whiteData ? whiteData.totalDays : sm.defaultTotalDays,
+          nonEffectiveDays: whiteData ? whiteData.coloredDays : sm.defaultNonEffDays,
+          effectiveDays: whiteData ? whiteData.whiteDays : sm.defaultEffDays,
           notes: sm.notes || [],
         });
       }
@@ -876,8 +1012,10 @@ export async function parseKaldikExcel(input: File | ArrayBuffer | Uint8Array): 
     monthAnalysis = completeAnalysis;
   }
 
-  const sem1 = monthAnalysis.filter(m => m.semester === 1).reduce((sum, m) => sum + m.effectiveWeeks, 0);
-  const sem2 = monthAnalysis.filter(m => m.semester === 2).reduce((sum, m) => sum + m.effectiveWeeks, 0);
+  const sem1Weeks = monthAnalysis.filter(m => m.semester === 1).reduce((sum, m) => sum + m.effectiveWeeks, 0);
+  const sem2Weeks = monthAnalysis.filter(m => m.semester === 2).reduce((sum, m) => sum + m.effectiveWeeks, 0);
+  const sem1Days = monthAnalysis.filter(m => m.semester === 1).reduce((sum, m) => sum + (m.effectiveDays || 0), 0);
+  const sem2Days = monthAnalysis.filter(m => m.semester === 2).reduce((sum, m) => sum + (m.effectiveDays || 0), 0);
 
   return {
     monthAnalysis,
@@ -885,8 +1023,10 @@ export async function parseKaldikExcel(input: File | ArrayBuffer | Uint8Array): 
     academicYear: detectedYear,
     weeklyHours: detectedWeeklyHours,
     subjectName: detectedSubjectName,
-    totalEffectiveSem1: sem1,
-    totalEffectiveSem2: sem2,
+    totalEffectiveSem1: sem1Weeks,
+    totalEffectiveSem2: sem2Weeks,
+    totalEffectiveDaysSem1: sem1Days,
+    totalEffectiveDaysSem2: sem2Days,
   };
 }
 

@@ -97,7 +97,15 @@ export default function App() {
           if (sem1Eff === 19 && sem2Eff === 18) {
             return INITIAL_MONTH_ANALYSIS;
           }
-          return parsed;
+          return parsed.map((m: any) => {
+            const def = INITIAL_MONTH_ANALYSIS.find(im => im.monthName.toLowerCase() === m.monthName.toLowerCase());
+            return {
+              ...m,
+              totalDays: m.totalDays ?? (def?.totalDays ?? 30),
+              effectiveDays: m.effectiveDays ?? (def?.effectiveDays ?? m.effectiveWeeks * 5),
+              nonEffectiveDays: m.nonEffectiveDays ?? (def?.nonEffectiveDays ?? 0),
+            };
+          });
         }
       } catch {
         return INITIAL_MONTH_ANALYSIS;

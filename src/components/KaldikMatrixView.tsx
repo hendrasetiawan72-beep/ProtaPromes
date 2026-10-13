@@ -21,6 +21,9 @@ export const KaldikMatrixView: React.FC<KaldikMatrixViewProps> = ({
 
   const totalEffSem1 = sem1.reduce((sum, m) => sum + m.effectiveWeeks, 0);
   const totalEffSem2 = sem2.reduce((sum, m) => sum + m.effectiveWeeks, 0);
+  const totalEffDaysSem1 = sem1.reduce((sum, m) => sum + (m.effectiveDays || 0), 0);
+  const totalEffDaysSem2 = sem2.reduce((sum, m) => sum + (m.effectiveDays || 0), 0);
+  const totalEffDaysYear = totalEffDaysSem1 + totalEffDaysSem2;
 
   return (
     <div className="space-y-6">
@@ -32,8 +35,11 @@ export const KaldikMatrixView: React.FC<KaldikMatrixViewProps> = ({
           </div>
           <div>
             <div className="text-2xl font-black text-slate-900">{totalEffSem1} Minggu</div>
-            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              Efektif Semester 1 (Gasal)
+            <div className="text-xs font-bold text-blue-700 mt-0.5">
+              {totalEffDaysSem1} Hari Efektif (Putih)
+            </div>
+            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mt-0.5">
+              Semester 1 (Gasal)
             </div>
           </div>
         </div>
@@ -44,8 +50,11 @@ export const KaldikMatrixView: React.FC<KaldikMatrixViewProps> = ({
           </div>
           <div>
             <div className="text-2xl font-black text-slate-900">{totalEffSem2} Minggu</div>
-            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              Efektif Semester 2 (Genap)
+            <div className="text-xs font-bold text-emerald-700 mt-0.5">
+              {totalEffDaysSem2} Hari Efektif (Putih)
+            </div>
+            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mt-0.5">
+              Semester 2 (Genap)
             </div>
           </div>
         </div>
@@ -56,9 +65,23 @@ export const KaldikMatrixView: React.FC<KaldikMatrixViewProps> = ({
           </div>
           <div>
             <div className="text-2xl font-black text-slate-900">{totalEffSem1 + totalEffSem2} Minggu</div>
-            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              Total Minggu Efektif 1 Tahun
+            <div className="text-xs font-bold text-indigo-700 mt-0.5">
+              {totalEffDaysYear} Hari Efektif (Putih)
             </div>
+            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mt-0.5">
+              Total 1 Tahun Pelajaran
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Visual Rule Notice */}
+      <div className="bg-blue-50/70 border border-blue-200 rounded-2xl p-4 flex items-start gap-3 text-xs text-blue-950">
+        <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+        <div>
+          <div className="font-bold text-blue-900 text-sm">Ketentuan Perhitungan Hari Efektif Belajar (HEB)</div>
+          <div className="text-blue-800 mt-0.5">
+            Hari Efektif Belajar dihitung <strong>hanya pada kolom sheet / sel kalender yang berwarna putih</strong> pada setiap bulan. Sel yang memiliki warna latar (agenda libur, MPLS, asesmen/ujian, dll.) dihitung sebagai hari tidak efektif.
           </div>
         </div>
       </div>
@@ -82,14 +105,15 @@ export const KaldikMatrixView: React.FC<KaldikMatrixViewProps> = ({
           <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
             <div className="bg-blue-600 text-white px-4 py-2.5 font-bold text-sm flex items-center justify-between">
               <span>SEMESTER 1 (GASAL)</span>
-              <span className="text-xs bg-white/20 px-2.5 py-0.5 rounded-full">
-                {totalEffSem1} Minggu Efektif
+              <span className="text-xs bg-white/20 px-2.5 py-0.5 rounded-full font-mono">
+                {totalEffSem1} Mgg ({totalEffDaysSem1} Hari Putih)
               </span>
             </div>
             <table className="w-full text-xs text-left">
               <thead className="bg-slate-50 border-b border-slate-200 font-semibold text-slate-700">
                 <tr>
                   <th className="py-2 px-3">Bulan</th>
+                  <th className="py-2 px-2 text-center text-blue-900 bg-blue-50/50">Hari Putih</th>
                   <th className="py-2 px-2 text-center">Jml Mgg</th>
                   <th className="py-2 px-2 text-center text-rose-600">Tdk Efektif</th>
                   <th className="py-2 px-2 text-center text-emerald-700">Efektif</th>
@@ -100,6 +124,7 @@ export const KaldikMatrixView: React.FC<KaldikMatrixViewProps> = ({
                 {sem1.map(m => (
                   <tr key={m.monthName} className="hover:bg-slate-50/50">
                     <td className="py-2 px-3 font-bold text-slate-900">{m.monthName}</td>
+                    <td className="py-2 px-2 text-center font-bold text-blue-900 bg-blue-50/20">{m.effectiveDays ?? 0} hr</td>
                     <td className="py-2 px-2 text-center font-semibold text-slate-700">{m.totalWeeks}</td>
                     <td className="py-2 px-2 text-center font-bold text-rose-600">{m.nonEffectiveWeeks}</td>
                     <td className="py-2 px-2 text-center font-black text-emerald-700">{m.effectiveWeeks}</td>
@@ -116,14 +141,15 @@ export const KaldikMatrixView: React.FC<KaldikMatrixViewProps> = ({
           <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
             <div className="bg-indigo-600 text-white px-4 py-2.5 font-bold text-sm flex items-center justify-between">
               <span>SEMESTER 2 (GENAP)</span>
-              <span className="text-xs bg-white/20 px-2.5 py-0.5 rounded-full">
-                {totalEffSem2} Minggu Efektif
+              <span className="text-xs bg-white/20 px-2.5 py-0.5 rounded-full font-mono">
+                {totalEffSem2} Mgg ({totalEffDaysSem2} Hari Putih)
               </span>
             </div>
             <table className="w-full text-xs text-left">
               <thead className="bg-slate-50 border-b border-slate-200 font-semibold text-slate-700">
                 <tr>
                   <th className="py-2 px-3">Bulan</th>
+                  <th className="py-2 px-2 text-center text-blue-900 bg-blue-50/50">Hari Putih</th>
                   <th className="py-2 px-2 text-center">Jml Mgg</th>
                   <th className="py-2 px-2 text-center text-rose-600">Tdk Efektif</th>
                   <th className="py-2 px-2 text-center text-emerald-700">Efektif</th>
@@ -134,6 +160,7 @@ export const KaldikMatrixView: React.FC<KaldikMatrixViewProps> = ({
                 {sem2.map(m => (
                   <tr key={m.monthName} className="hover:bg-slate-50/50">
                     <td className="py-2 px-3 font-bold text-slate-900">{m.monthName}</td>
+                    <td className="py-2 px-2 text-center font-bold text-blue-900 bg-blue-50/20">{m.effectiveDays ?? 0} hr</td>
                     <td className="py-2 px-2 text-center font-semibold text-slate-700">{m.totalWeeks}</td>
                     <td className="py-2 px-2 text-center font-bold text-rose-600">{m.nonEffectiveWeeks}</td>
                     <td className="py-2 px-2 text-center font-black text-emerald-700">{m.effectiveWeeks}</td>
@@ -147,10 +174,40 @@ export const KaldikMatrixView: React.FC<KaldikMatrixViewProps> = ({
           </div>
         </div>
 
-        {/* Legend / Keterangan Event KALDIK matching Screenshot 7 */}
+        {/* Color Legend Box */}
         <div className="mt-8 pt-6 border-t border-slate-200">
           <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">
-            Daftar Agenda & Kegiatan Penting KALDIK {academicYear}
+            Panduan Warna Kalender Pendidikan &amp; Agenda
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 text-xs mb-6">
+            <div className="p-2 rounded-xl border border-slate-300 bg-white shadow-2xs flex items-center gap-2">
+              <span className="w-4 h-4 rounded border border-slate-400 bg-white shrink-0"></span>
+              <span className="font-semibold text-slate-800">Hari Putih (Efektif)</span>
+            </div>
+            <div className="p-2 rounded-xl border border-rose-200 bg-rose-50 flex items-center gap-2">
+              <span className="w-4 h-4 rounded bg-rose-500 shrink-0"></span>
+              <span className="font-semibold text-rose-900">Libur / Cuti</span>
+            </div>
+            <div className="p-2 rounded-xl border border-emerald-200 bg-emerald-50 flex items-center gap-2">
+              <span className="w-4 h-4 rounded bg-emerald-500 shrink-0"></span>
+              <span className="font-semibold text-emerald-900">MPLS Siswa</span>
+            </div>
+            <div className="p-2 rounded-xl border border-cyan-200 bg-cyan-50 flex items-center gap-2">
+              <span className="w-4 h-4 rounded bg-cyan-500 shrink-0"></span>
+              <span className="font-semibold text-cyan-900">Asesmen (ANBK)</span>
+            </div>
+            <div className="p-2 rounded-xl border border-amber-200 bg-amber-50 flex items-center gap-2">
+              <span className="w-4 h-4 rounded bg-amber-500 shrink-0"></span>
+              <span className="font-semibold text-amber-900">PSTS / Ujian</span>
+            </div>
+            <div className="p-2 rounded-xl border border-indigo-200 bg-indigo-50 flex items-center gap-2">
+              <span className="w-4 h-4 rounded bg-indigo-500 shrink-0"></span>
+              <span className="font-semibold text-indigo-900">PSAS / PSAT / UKK</span>
+            </div>
+          </div>
+
+          <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">
+            Daftar Agenda &amp; Kegiatan Penting KALDIK {academicYear}
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 text-xs">
             {events.map(ev => (
