@@ -113,41 +113,42 @@ export const INITIAL_SUBJECTS: Subject[] = [
 ];
 
 export const INITIAL_MONTH_ANALYSIS: MonthEffectiveBreakdown[] = [
-  // Semester 1 (Gasal)
+  // Semester 1 (Gasal) - Total 27 Minggu, 10 Tidak Efektif, 17 Efektif
   { monthName: 'Juli', semester: 1, totalWeeks: 5, nonEffectiveWeeks: 3, effectiveWeeks: 2, notes: ['Libur Semester Genap', 'MPLS'] },
-  { monthName: 'Agustus', semester: 1, totalWeeks: 4, nonEffectiveWeeks: 1, effectiveWeeks: 3, notes: ['Asesmen Nasional'] },
-  { monthName: 'September', semester: 1, totalWeeks: 4, nonEffectiveWeeks: 1, effectiveWeeks: 3, notes: ['PSTS'] },
+  { monthName: 'Agustus', semester: 1, totalWeeks: 4, nonEffectiveWeeks: 1, effectiveWeeks: 3, notes: ['Asesmen Nasional (ANBK)'] },
+  { monthName: 'September', semester: 1, totalWeeks: 4, nonEffectiveWeeks: 1, effectiveWeeks: 3, notes: ['PSTS Gasal'] },
   { monthName: 'Oktober', semester: 1, totalWeeks: 5, nonEffectiveWeeks: 0, effectiveWeeks: 5, notes: [] },
   { monthName: 'November', semester: 1, totalWeeks: 4, nonEffectiveWeeks: 0, effectiveWeeks: 4, notes: [] },
-  { monthName: 'Desember', semester: 1, totalWeeks: 5, nonEffectiveWeeks: 5, effectiveWeeks: 0, notes: ['PSAS', 'Ujian Susulan & Remedial', 'Class Meeting', 'Libur Semester Gasal'] },
-  // Semester 2 (Genap)
+  { monthName: 'Desember', semester: 1, totalWeeks: 5, nonEffectiveWeeks: 5, effectiveWeeks: 0, notes: ['PSAS', 'Ujian Susulan & Remedial', 'Pembagian Rapor', 'Libur Akhir Semester Gasal'] },
+  // Semester 2 (Genap) - Total 25 Minggu, 15 Tidak Efektif, 10 Efektif
   { monthName: 'Januari', semester: 2, totalWeeks: 4, nonEffectiveWeeks: 0, effectiveWeeks: 4, notes: [] },
   { monthName: 'Februari', semester: 2, totalWeeks: 4, nonEffectiveWeeks: 0, effectiveWeeks: 4, notes: [] },
-  { monthName: 'Maret', semester: 2, totalWeeks: 4, nonEffectiveWeeks: 3, effectiveWeeks: 1, notes: ['PSTS', 'Libur Hari Raya Idul Fitri 1448 H'] },
-  { monthName: 'April', semester: 2, totalWeeks: 5, nonEffectiveWeeks: 4, effectiveWeeks: 1, notes: ['PSAJ', 'PSAJ Susulan', 'UKK'] },
-  { monthName: 'Mei', semester: 2, totalWeeks: 4, nonEffectiveWeeks: 4, effectiveWeeks: 0, notes: ['Pengumuman Kelulusan', 'Wisuda', 'Persiapan Ujian'] },
-  { monthName: 'Juni', semester: 2, totalWeeks: 4, nonEffectiveWeeks: 4, effectiveWeeks: 0, notes: ['PSAT', 'Ujian Susulan & Remedial', 'Libur Akhir Semester'] },
+  { monthName: 'Maret', semester: 2, totalWeeks: 4, nonEffectiveWeeks: 3, effectiveWeeks: 1, notes: ['PSTS Genap', 'Libur Menjelang & Hari Raya Idul Fitri 1448 H'] },
+  { monthName: 'April', semester: 2, totalWeeks: 5, nonEffectiveWeeks: 4, effectiveWeeks: 1, notes: ['PSAJ', 'UKK (Uji Kompetensi Keahlian)'] },
+  { monthName: 'Mei', semester: 2, totalWeeks: 4, nonEffectiveWeeks: 4, effectiveWeeks: 0, notes: ['Pengumuman Kelulusan & Wisuda', 'Hari Libur Nasional'] },
+  { monthName: 'Juni', semester: 2, totalWeeks: 4, nonEffectiveWeeks: 4, effectiveWeeks: 0, notes: ['PSAT', 'Ujian Susulan & Rapor', 'Libur Akhir Tahun Pelajaran'] },
 ];
 
 export const INITIAL_KALDIK_EVENTS: KaldikEvent[] = [
-  { id: '1', name: 'Mulai Masuk Tahun Ajaran Baru 2026/2027', dateRange: '13 Juli 2026', semester: 1, monthName: 'Juli', weekNumber: 3, type: 'kegiatan' },
-  { id: '2', name: 'Masa Pengenalan Lingkungan Sekolah (MPLS)', dateRange: '13 - 17 Juli 2026', semester: 1, monthName: 'Juli', weekNumber: 3, type: 'mpls' },
+  { id: '1', name: 'Libur Akhir Semester Genap TA Sebelumnya', dateRange: '1 - 12 Juli 2026', semester: 1, monthName: 'Juli', weekNumber: 1, type: 'libur' },
+  { id: '2', name: 'Masa Pengenalan Lingkungan Sekolah (MPLS)', dateRange: '15 - 20 Juli 2026', semester: 1, monthName: 'Juli', weekNumber: 3, type: 'mpls' },
   { id: '3', name: 'Upacara HUT RI ke-81', dateRange: '17 Agustus 2026', semester: 1, monthName: 'Agustus', weekNumber: 3, type: 'kegiatan' },
-  { id: '4', name: 'Asesmen Nasional (ANBK)', dateRange: '24 - 27 Agustus 2026', semester: 1, monthName: 'Agustus', weekNumber: 4, type: 'an' },
-  { id: '5', name: 'Penilaian Sumatif Tengah Semester (PSTS) Gasal', dateRange: '21 - 24 September 2026', semester: 1, monthName: 'September', weekNumber: 4, type: 'psts' },
-  { id: '6', name: 'Penilaian Sumatif Akhir Semester (PSAS)', dateRange: '1 - 4 Desember 2026', semester: 1, monthName: 'Desember', weekNumber: 1, type: 'psas' },
-  { id: '7', name: 'Ujian Susulan, Remedial & Class Meeting', dateRange: '7 - 10 Desember 2026', semester: 1, monthName: 'Desember', weekNumber: 2, type: 'remedial' },
+  { id: '4', name: 'Asesmen Nasional (ANBK)', dateRange: '18 - 23 Agustus 2026', semester: 1, monthName: 'Agustus', weekNumber: 3, type: 'an' },
+  { id: '5', name: 'Penilaian Sumatif Tengah Semester (PSTS) Gasal', dateRange: '1 - 6 September 2026', semester: 1, monthName: 'September', weekNumber: 1, type: 'psts' },
+  { id: '6', name: 'Penilaian Sumatif Akhir Semester (PSAS) Gasal', dateRange: '24 - 30 November 2026', semester: 1, monthName: 'Desember', weekNumber: 1, type: 'psas' },
+  { id: '7', name: 'Ujian Susulan, Remedial & Class Meeting', dateRange: '7 - 12 Desember 2026', semester: 1, monthName: 'Desember', weekNumber: 2, type: 'remedial' },
   { id: '8', name: 'Penyerahan Buku Laporan Hasil Belajar (Rapor)', dateRange: '18 Desember 2026', semester: 1, monthName: 'Desember', weekNumber: 3, type: 'kegiatan' },
-  { id: '9', name: 'Libur Akhir Semester Gasal', dateRange: '21 Desember 2026 - 1 Januari 2027', semester: 1, monthName: 'Desember', weekNumber: 4, type: 'libur' },
-  { id: '10', name: 'Awal Masuk Semester Genap', dateRange: '4 Januari 2027', semester: 2, monthName: 'Januari', weekNumber: 1, type: 'kegiatan' },
-  { id: '11', name: 'PSTS Genap', dateRange: '8 - 12 Maret 2027', semester: 2, monthName: 'Maret', weekNumber: 2, type: 'psts' },
-  { id: '12', name: 'Libur Menjelang & Hari Raya Idul Fitri 1448 H', dateRange: '15 - 26 Maret 2027', semester: 2, monthName: 'Maret', weekNumber: 3, type: 'libur' },
-  { id: '13', name: 'Penilaian Sumatif Akhir Jenjang (PSAJ) Kelas XII', dateRange: '5 - 8 April 2027', semester: 2, monthName: 'April', weekNumber: 1, type: 'psaj' },
+  { id: '9', name: 'Libur Akhir Semester Gasal', dateRange: '19 - 31 Desember 2026', semester: 1, monthName: 'Desember', weekNumber: 4, type: 'libur' },
+  { id: '10', name: 'Awal Masuk KBM Semester Genap', dateRange: '4 Januari 2027', semester: 2, monthName: 'Januari', weekNumber: 1, type: 'kegiatan' },
+  { id: '11', name: 'PSTS Genap', dateRange: '1 - 6 Maret 2027', semester: 2, monthName: 'Maret', weekNumber: 1, type: 'psts' },
+  { id: '12', name: 'Libur Menjelang & Hari Raya Idul Fitri 1448 H', dateRange: '15 - 27 Maret 2027', semester: 2, monthName: 'Maret', weekNumber: 3, type: 'libur' },
+  { id: '13', name: 'Penilaian Sumatif Akhir Jenjang (PSAJ) Kelas XII', dateRange: '5 - 10 April 2027', semester: 2, monthName: 'April', weekNumber: 1, type: 'psaj' },
   { id: '14', name: 'Uji Kompetensi Keahlian (UKK Praktik)', dateRange: '19 - 24 April 2027', semester: 2, monthName: 'April', weekNumber: 3, type: 'ukk' },
-  { id: '15', name: 'Pengumuman Kelulusan SMK', dateRange: '3 Mei 2027', semester: 2, monthName: 'Mei', weekNumber: 1, type: 'wisuda' },
-  { id: '16', name: 'Wisuda & Pelepasan Siswa Kelas XII', dateRange: '19 Mei 2027', semester: 2, monthName: 'Mei', weekNumber: 3, type: 'wisuda' },
-  { id: '17', name: 'Penilaian Sumatif Akhir Tahun (PSAT) X & XI', dateRange: '2 - 4 Juni 2027', semester: 2, monthName: 'Juni', weekNumber: 1, type: 'psat' },
-  { id: '18', name: 'Libur Akhir Semester Genap', dateRange: '21 Juni - 10 Juli 2027', semester: 2, monthName: 'Juni', weekNumber: 4, type: 'libur' },
+  { id: '15', name: 'Pengumuman Kelulusan SMK', dateRange: '8 Mei 2027', semester: 2, monthName: 'Mei', weekNumber: 1, type: 'wisuda' },
+  { id: '16', name: 'Wisuda & Pelepasan Siswa Kelas XII', dateRange: '15 Mei 2027', semester: 2, monthName: 'Mei', weekNumber: 2, type: 'wisuda' },
+  { id: '17', name: 'Penilaian Sumatif Akhir Tahun (PSAT) Genap', dateRange: '1 - 8 Juni 2027', semester: 2, monthName: 'Juni', weekNumber: 1, type: 'psat' },
+  { id: '18', name: 'Ujian Susulan & Penerimaan Rapor Genap', dateRange: '14 - 19 Juni 2027', semester: 2, monthName: 'Juni', weekNumber: 2, type: 'remedial' },
+  { id: '19', name: 'Libur Akhir Tahun Pelajaran', dateRange: '21 Juni - 10 Juli 2027', semester: 2, monthName: 'Juni', weekNumber: 4, type: 'libur' },
 ];
 
 export const INITIAL_OBJECTIVES_SEM1: LearningObjective[] = [

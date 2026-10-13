@@ -149,25 +149,50 @@ export function exportPromesExcel(
     sheetData.push(headerRow2);
 
     const getWeekLabel = (month: MonthEffectiveBreakdown, weekNum: number): string | null => {
+      if (month.nonEffectiveWeeks === 0) return null;
+      if (month.effectiveWeeks === 0) {
+        if (month.notes && month.notes.length > 0) {
+          const noteIdx = Math.min(weekNum - 1, month.notes.length - 1);
+          return month.notes[noteIdx] || 'NON-EFEKTIF';
+        }
+        return 'NON-EFEKTIF';
+      }
+
+      const mName = month.monthName.toLowerCase();
       if (isGasal) {
-        if (month.monthName === 'Juli' && (weekNum === 1 || weekNum === 2)) return 'LIBUR SEM GENAP';
-        if (month.monthName === 'Juli' && (weekNum === 3 || weekNum === 4)) return 'MPLS';
-        if (month.monthName === 'Agustus' && weekNum === 2) return 'Asesmen Nasional';
-        if (month.monthName === 'September' && weekNum === 4) return 'PSTS';
-        if (month.monthName === 'Desember' && weekNum === 1) return 'PSAS';
-        if (month.monthName === 'Desember' && (weekNum === 2 || weekNum === 3)) return 'Ujian Susulan, remedial';
-        if (month.monthName === 'Desember' && (weekNum === 4 || weekNum === 5)) return 'LIBUR SEM GANJIL';
+        if (mName === 'juli' && (weekNum === 1 || weekNum === 2)) return 'LIBUR SEM GENAP';
+        if (mName === 'juli' && weekNum === 3) return 'MPLS';
+        if (mName === 'agustus' && weekNum === 3) return 'Asesmen Nasional (ANBK)';
+        if (mName === 'september' && weekNum === 1) return 'PSTS GASAL';
+        if (mName === 'desember') {
+          if (weekNum === 1) return 'PSAS';
+          if (weekNum === 2) return 'Ujian Susulan & Remedial';
+          if (weekNum === 3) return 'Pembagian Rapor';
+          return 'LIBUR SEM GANJIL';
+        }
       } else {
-        if (month.monthName === 'Maret' && weekNum === 2) return 'PSTS';
-        if (month.monthName === 'Maret' && (weekNum === 3 || weekNum === 4)) return 'LIBUR HARI RAYA IDUL FITRI';
-        if (month.monthName === 'April' && weekNum === 1) return 'PSAJ';
-        if (month.monthName === 'April' && weekNum === 2) return 'PSAJ SUSULAN';
-        if (month.monthName === 'April' && (weekNum === 3 || weekNum === 4)) return 'UKK';
-        if (month.monthName === 'Mei' && weekNum === 1) return 'PENGUMUMAN KELULUSAN';
-        if (month.monthName === 'Mei' && weekNum === 2) return 'WISUDA';
-        if (month.monthName === 'Juni' && weekNum === 1) return 'PSAT';
-        if (month.monthName === 'Juni' && (weekNum === 2 || weekNum === 3)) return 'Ujian susulan remedial';
-        if (month.monthName === 'Juni' && weekNum === 4) return 'Libur Akhir Semester';
+        if (mName === 'maret') {
+          if (weekNum === 1) return 'PSTS GENAP';
+          if (weekNum >= 3) return 'LIBUR IDUL FITRI';
+        }
+        if (mName === 'april') {
+          if (weekNum === 1) return 'PSAJ';
+          if (weekNum >= 3) return 'UKK';
+        }
+        if (mName === 'mei') {
+          if (weekNum === 1) return 'KELULUSAN';
+          if (weekNum === 2) return 'WISUDA';
+          return 'LIBUR NASIONAL';
+        }
+        if (mName === 'juni') {
+          if (weekNum === 1) return 'PSAT';
+          if (weekNum === 2) return 'REMEDIAL & RAPOR';
+          return 'LIBUR AKHIR TAHUN';
+        }
+      }
+
+      if (month.nonEffectiveWeeks > 0 && weekNum > (month.totalWeeks - month.nonEffectiveWeeks)) {
+        return 'NON-EFEKTIF';
       }
       return null;
     };

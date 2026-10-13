@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Download, Printer, Settings2 } from 'lucide-react';
+import { Download, Printer, Settings2, RotateCcw } from 'lucide-react';
 import { SchoolProfile, DocumentMeta, MonthEffectiveBreakdown } from '../types';
 import { KopSurat } from './KopSurat';
 import { SignatureBlock } from './SignatureBlock';
 import { exportAnalisisMingguEfektifExcel } from '../services/documentGenerator';
+import { INITIAL_MONTH_ANALYSIS } from '../data/initialData';
 
 interface AnalisisMingguEfektifViewProps {
   school: SchoolProfile;
@@ -110,6 +111,15 @@ export const AnalisisMingguEfektifView: React.FC<AnalisisMingguEfektifViewProps>
           >
             <Settings2 className="w-3.5 h-3.5" />
             {isEditingData ? 'Selesai Edit Tabel' : 'Kustomisasi Jumlah Minggu'}
+          </button>
+
+          <button
+            onClick={() => onUpdateMonthAnalysis(INITIAL_MONTH_ANALYSIS)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300 transition"
+            title="Kembalikan perhitungan minggu efektif ke data standar Kalender Pendidikan"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            Reset Standar Kaldik
           </button>
         </div>
 

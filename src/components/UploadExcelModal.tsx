@@ -198,9 +198,9 @@ export const UploadExcelModal: React.FC<UploadExcelModalProps> = ({
               </ul>
             ) : (
               <ul className="list-disc list-inside space-y-0.5 text-slate-600">
-                <li>Otomatis membaca sheet <strong>"per mgg efektif"</strong> untuk angka Minggu Efektif.</li>
-                <li>Mengekstrak seluruh catatan yang diawali <strong>*</strong> menjadi agenda event resmi sekolah.</li>
-                <li>Mendeteksi Tahun Pelajaran dan Beban Jam secara otomatis tanpa hardcode posisi.</li>
+                <li>Otomatis membaca tabel <strong>Perhitungan Minggu Efektif</strong> (Jumlah Minggu per bulan &amp; Minggu Efektif) dan langsung sinkron ke Promes &amp; Prota.</li>
+                <li>Mengekstrak seluruh catatan agenda yang diawali tanda <strong>*</strong> menjadi kalender agenda resmi sekolah.</li>
+                <li>Mendeteksi Tahun Pelajaran dan Beban Jam secara otomatis tanpa perlu input ulang.</li>
               </ul>
             )}
           </div>

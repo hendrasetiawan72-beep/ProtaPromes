@@ -590,26 +590,52 @@ export async function parseKaldikExcel(input: File | ArrayBuffer | Uint8Array): 
   // -------------------------------------------------------------------------
   const targetSheetName = sheetNames.find(s => {
     const lower = s.toLowerCase();
-    return lower.includes('per mgg efektif') || lower.includes('mgg efektif') || lower.includes('minggu efektif');
-  }) || sheetNames.find(s => s.toLowerCase().includes('efektif')) || sheetNames[0];
+    return lower.includes('per mgg efektif') || lower.includes('mgg efektif') || lower.includes('minggu efektif') || lower.includes('per mgg');
+  }) || sheetNames.find(s => {
+    const lower = s.toLowerCase();
+    return lower.includes('efektif');
+  }) || sheetNames.find(s => {
+    const sheet = workbook.Sheets[s];
+    if (!sheet) return false;
+    const rows = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1 });
+    return rows.slice(0, 20).some(r => Array.isArray(r) && r.some(c => {
+      const txt = String(c || '').toLowerCase();
+      return txt.includes('perhitungan minggu efektif') || (txt.includes('bulan') && (txt.includes('minggu') || txt.includes('efektif')));
+    }));
+  }) || sheetNames[0];
 
-  const standardMonths: Array<{ name: string; semester: 1 | 2; defaultWeeks: number }> = [
-    { name: 'Juli', semester: 1, defaultWeeks: 5 },
-    { name: 'Agustus', semester: 1, defaultWeeks: 4 },
-    { name: 'September', semester: 1, defaultWeeks: 4 },
-    { name: 'Oktober', semester: 1, defaultWeeks: 5 },
-    { name: 'November', semester: 1, defaultWeeks: 4 },
-    { name: 'Desember', semester: 1, defaultWeeks: 5 },
-    { name: 'Januari', semester: 2, defaultWeeks: 4 },
-    { name: 'Februari', semester: 2, defaultWeeks: 4 },
-    { name: 'Maret', semester: 2, defaultWeeks: 4 },
-    { name: 'April', semester: 2, defaultWeeks: 5 },
-    { name: 'Mei', semester: 2, defaultWeeks: 4 },
-    { name: 'Juni', semester: 2, defaultWeeks: 4 },
+  const standardMonths: Array<{
+    name: string;
+    semester: 1 | 2;
+    defaultWeeks: number;
+    defaultNonEff: number;
+    defaultEff: number;
+    notes?: string[];
+  }> = [
+    { name: 'Juli', semester: 1, defaultWeeks: 5, defaultNonEff: 3, defaultEff: 2, notes: ['Libur Sem Genap', 'MPLS'] },
+    { name: 'Agustus', semester: 1, defaultWeeks: 4, defaultNonEff: 1, defaultEff: 3, notes: ['Asesmen Nasional (ANBK)'] },
+    { name: 'September', semester: 1, defaultWeeks: 4, defaultNonEff: 1, defaultEff: 3, notes: ['PSTS Gasal'] },
+    { name: 'Oktober', semester: 1, defaultWeeks: 5, defaultNonEff: 0, defaultEff: 5, notes: [] },
+    { name: 'November', semester: 1, defaultWeeks: 4, defaultNonEff: 0, defaultEff: 4, notes: [] },
+    { name: 'Desember', semester: 1, defaultWeeks: 5, defaultNonEff: 5, defaultEff: 0, notes: ['PSAS', 'Remedial', 'Rapor', 'Libur Gasal'] },
+    { name: 'Januari', semester: 2, defaultWeeks: 4, defaultNonEff: 0, defaultEff: 4, notes: [] },
+    { name: 'Februari', semester: 2, defaultWeeks: 4, defaultNonEff: 0, defaultEff: 4, notes: [] },
+    { name: 'Maret', semester: 2, defaultWeeks: 4, defaultNonEff: 3, defaultEff: 1, notes: ['PSTS Genap', 'Libur Hari Raya Idul Fitri 1448 H'] },
+    { name: 'April', semester: 2, defaultWeeks: 5, defaultNonEff: 4, defaultEff: 1, notes: ['PSAJ', 'UKK'] },
+    { name: 'Mei', semester: 2, defaultWeeks: 4, defaultNonEff: 4, defaultEff: 0, notes: ['Kelulusan', 'Wisuda'] },
+    { name: 'Juni', semester: 2, defaultWeeks: 4, defaultNonEff: 4, defaultEff: 0, notes: ['PSAT', 'Remedial & Rapor', 'Libur Akhir Tahun'] },
   ];
 
-  if (targetSheetName && workbook.Sheets[targetSheetName]) {
-    const sheet = workbook.Sheets[targetSheetName];
+  // Try candidate sheets or all sheets in workbook
+  const candidateSheets = [
+    targetSheetName,
+    ...sheetNames.filter(s => s !== targetSheetName)
+  ].filter(Boolean);
+
+  for (const sName of candidateSheets) {
+    if (monthAnalysis.length >= 12) break;
+    const sheet = workbook.Sheets[sName];
+    if (!sheet) continue;
     const rows = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1 });
 
     // Detect column indexes for table: Bulan, Jumlah Minggu, Tidak Efektif, Efektif
@@ -623,14 +649,14 @@ export async function parseKaldikExcel(input: File | ArrayBuffer | Uint8Array): 
       if (!Array.isArray(row)) continue;
 
       row.forEach((cell, c) => {
-        const str = String(cell || '').trim().toUpperCase();
-        if (str === 'BULAN' || str.includes('NAMA BULAN')) {
+        const str = String(cell || '').trim().toLowerCase().replace(/[\s_\-]/g, '');
+        if (str.includes('bulan') || str.includes('namabulan')) {
           colMonth = c;
-        } else if (str.includes('JUMLAH MINGGU') || str.includes('JML MINGGU') || str.includes('TOTAL MINGGU')) {
+        } else if (str.includes('jumlahminggu') || str.includes('jmlminggu') || str.includes('totalminggu') || str.includes('banyakminggu')) {
           colTotal = c;
-        } else if (str.includes('TIDAK EFEKTIF') || str.includes('NON EFEKTIF')) {
+        } else if (str.includes('tidakefektif') || str.includes('nonefektif') || str.includes('tdkefektif')) {
           colNonEff = c;
-        } else if (str.includes('EFEKTIF') && !str.includes('TIDAK') && !str.includes('NON')) {
+        } else if (str.includes('efektif') && !str.includes('tidak') && !str.includes('non') && !str.includes('tdk')) {
           colEff = c;
         }
       });
@@ -639,7 +665,11 @@ export async function parseKaldikExcel(input: File | ArrayBuffer | Uint8Array): 
 
     // Map each standard month from table rows
     standardMonths.forEach(mObj => {
-      let foundData: { totalWeeks: number; nonEffectiveWeeks: number; effectiveWeeks: number } | null = null;
+      if (monthAnalysis.some(m => m.monthName.toLowerCase() === mObj.name.toLowerCase())) {
+        return; // already found from earlier sheet
+      }
+
+      let foundData: { totalWeeks: number; nonEffectiveWeeks: number; effectiveWeeks: number; notes: string[] } | null = null;
 
       for (const row of rows) {
         if (!Array.isArray(row)) continue;
@@ -652,47 +682,63 @@ export async function parseKaldikExcel(input: File | ArrayBuffer | Uint8Array): 
 
         if (matchIdx !== -1) {
           // If columns were identified by headers
-          if (colTotal !== -1 && colNonEff !== -1 && colEff !== -1) {
+          if (colTotal !== -1 && colEff !== -1) {
             const tot = parseInt(String(row[colTotal] || '').replace(/\D/g, ''), 10);
-            const non = parseInt(String(row[colNonEff] || '').replace(/\D/g, ''), 10);
             const eff = parseInt(String(row[colEff] || '').replace(/\D/g, ''), 10);
+            const non = colNonEff !== -1 ? parseInt(String(row[colNonEff] || '').replace(/\D/g, ''), 10) : NaN;
 
             if (!isNaN(tot) && !isNaN(eff)) {
               foundData = {
                 totalWeeks: tot,
                 nonEffectiveWeeks: isNaN(non) ? Math.max(0, tot - eff) : non,
                 effectiveWeeks: eff,
+                notes: [],
               };
-              break;
             }
           }
 
           // Fallback: extract sequential numbers after the month cell
-          const numbersAfter = row
-            .slice(matchIdx + 1)
-            .map(n => parseInt(String(n || '').trim(), 10))
-            .filter(n => !isNaN(n) && n >= 0 && n <= 10);
+          if (!foundData) {
+            const numbersAfter = row
+              .slice(matchIdx + 1)
+              .map(n => parseInt(String(n || '').trim(), 10))
+              .filter(n => !isNaN(n) && n >= 0 && n <= 10);
 
-          if (numbersAfter.length >= 3) {
-            foundData = {
-              totalWeeks: numbersAfter[0],
-              nonEffectiveWeeks: numbersAfter[1],
-              effectiveWeeks: numbersAfter[2],
-            };
-            break;
-          } else if (numbersAfter.length === 2) {
-            foundData = {
-              totalWeeks: numbersAfter[0],
-              nonEffectiveWeeks: numbersAfter[1],
-              effectiveWeeks: Math.max(0, numbersAfter[0] - numbersAfter[1]),
-            };
-            break;
-          } else if (numbersAfter.length === 1) {
-            foundData = {
-              totalWeeks: mObj.defaultWeeks,
-              nonEffectiveWeeks: Math.max(0, mObj.defaultWeeks - numbersAfter[0]),
-              effectiveWeeks: numbersAfter[0],
-            };
+            if (numbersAfter.length >= 3) {
+              const [n1, n2, n3] = numbersAfter;
+              // Check if n1 is sum of n2+n3 (total, nonEff, eff)
+              if (n1 === n2 + n3) {
+                foundData = { totalWeeks: n1, nonEffectiveWeeks: n2, effectiveWeeks: n3, notes: [] };
+              } else if (n3 === n1 + n2) {
+                foundData = { totalWeeks: n3, nonEffectiveWeeks: n2, effectiveWeeks: n1, notes: [] };
+              } else {
+                foundData = { totalWeeks: n1, nonEffectiveWeeks: n2, effectiveWeeks: n3, notes: [] };
+              }
+            } else if (numbersAfter.length === 2) {
+              const [n1, n2] = numbersAfter;
+              if (n1 >= n2) {
+                foundData = { totalWeeks: n1, nonEffectiveWeeks: n2, effectiveWeeks: Math.max(0, n1 - n2), notes: [] };
+              } else {
+                foundData = { totalWeeks: n2, nonEffectiveWeeks: Math.max(0, n2 - n1), effectiveWeeks: n1, notes: [] };
+              }
+            } else if (numbersAfter.length === 1) {
+              foundData = {
+                totalWeeks: mObj.defaultWeeks,
+                nonEffectiveWeeks: Math.max(0, mObj.defaultWeeks - numbersAfter[0]),
+                effectiveWeeks: numbersAfter[0],
+                notes: [],
+              };
+            }
+          }
+
+          if (foundData) {
+            // Check for notes in row text cells
+            row.slice(matchIdx + 1).forEach(c => {
+              const str = String(c || '').trim();
+              if (str.length > 3 && isNaN(Number(str)) && !str.toLowerCase().includes('minggu')) {
+                foundData!.notes.push(str);
+              }
+            });
             break;
           }
         }
@@ -705,7 +751,7 @@ export async function parseKaldikExcel(input: File | ArrayBuffer | Uint8Array): 
           totalWeeks: foundData.totalWeeks,
           nonEffectiveWeeks: foundData.nonEffectiveWeeks,
           effectiveWeeks: foundData.effectiveWeeks,
-          notes: [],
+          notes: foundData.notes.length > 0 ? foundData.notes : (mObj.notes || []),
         });
       }
     });
@@ -816,31 +862,13 @@ export async function parseKaldikExcel(input: File | ArrayBuffer | Uint8Array): 
       if (exist) {
         completeAnalysis.push(exist);
       } else {
-        // Fallback default SMK Muhammadiyah Bawang calendar distribution
-        let eff = 4;
-        let nonEff = 0;
-        let defaultNotes: string[] = [];
-
-        if (sm.name === 'Juli') { eff = 2; nonEff = 3; defaultNotes = ['Libur Sem Genap', 'MPLS']; }
-        else if (sm.name === 'Agustus') { eff = 3; nonEff = 1; defaultNotes = ['Asesmen Nasional']; }
-        else if (sm.name === 'September') { eff = 3; nonEff = 1; defaultNotes = ['PSTS']; }
-        else if (sm.name === 'Oktober') { eff = 5; nonEff = 0; }
-        else if (sm.name === 'November') { eff = 4; nonEff = 0; }
-        else if (sm.name === 'Desember') { eff = 0; nonEff = 5; defaultNotes = ['PSAS', 'Remedial', 'Libur Gasal']; }
-        else if (sm.name === 'Januari') { eff = 4; nonEff = 0; }
-        else if (sm.name === 'Februari') { eff = 4; nonEff = 0; }
-        else if (sm.name === 'Maret') { eff = 1; nonEff = 3; defaultNotes = ['PSTS', 'Libur Idul Fitri']; }
-        else if (sm.name === 'April') { eff = 1; nonEff = 4; defaultNotes = ['PSAJ', 'UKK']; }
-        else if (sm.name === 'Mei') { eff = 0; nonEff = 4; defaultNotes = ['Kelulusan', 'Wisuda']; }
-        else if (sm.name === 'Juni') { eff = 0; nonEff = 4; defaultNotes = ['PSAT', 'Libur Genap']; }
-
         completeAnalysis.push({
           monthName: sm.name,
           semester: sm.semester,
           totalWeeks: sm.defaultWeeks,
-          nonEffectiveWeeks: nonEff,
-          effectiveWeeks: eff,
-          notes: defaultNotes,
+          nonEffectiveWeeks: sm.defaultNonEff,
+          effectiveWeeks: sm.defaultEff,
+          notes: sm.notes || [],
         });
       }
     });

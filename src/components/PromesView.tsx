@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { Download, Printer, Edit3, Sparkles, Eye, Columns, FileSpreadsheet } from 'lucide-react';
-import { SchoolProfile, DocumentMeta, LearningObjective, MonthEffectiveBreakdown } from '../types';
+import { Download, Printer, Edit3, Sparkles, Eye, Columns, FileSpreadsheet, CalendarCheck } from 'lucide-react';
+import { SchoolProfile, DocumentMeta, LearningObjective, MonthEffectiveBreakdown, KaldikEvent } from '../types';
 import { KopSurat } from './KopSurat';
 import { SignatureBlock } from './SignatureBlock';
 import { TujuanPembelajaranModal } from './TujuanPembelajaranModal';
@@ -17,6 +17,7 @@ interface PromesViewProps {
   onUpdateObjectivesSem1: (objs: LearningObjective[]) => void;
   onUpdateObjectivesSem2: (objs: LearningObjective[]) => void;
   monthAnalysis: MonthEffectiveBreakdown[];
+  events?: KaldikEvent[];
 }
 
 export const PromesView: React.FC<PromesViewProps> = ({
@@ -28,6 +29,7 @@ export const PromesView: React.FC<PromesViewProps> = ({
   onUpdateObjectivesSem1,
   onUpdateObjectivesSem2,
   monthAnalysis,
+  events = [],
 }) => {
   const [activeSemester, setActiveSemester] = useState<1 | 2>(1);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -46,72 +48,167 @@ export const PromesView: React.FC<PromesViewProps> = ({
   const totalTargetHours = hoursPerWeek * semEffWeeks;
 
   const totalWeeks = months.reduce((acc, m) => acc + m.totalWeeks, 0);
+  const totalNonEffWeeks = months.reduce((acc, m) => acc + m.nonEffectiveWeeks, 0);
+
   // Kolom width percentages yang pas agar tidak melebihi 100% dan tidak ada teks terpotong
   const tpColPercent = 25;
   const jpColPercent = 6;
   const remainingPercent = 100 - tpColPercent - jpColPercent; // 69%
   const weekColPercent = totalWeeks > 0 ? (remainingPercent / totalWeeks).toFixed(2) : '2.5';
 
-  // Format rapi untuk kegiatan khusus dengan badge ringkas agar teks tidak menabrak batas kolom
+  // Pemetaan minggu tidak efektif yang terintegrasi 100% dengan Kalender Pendidikan
+  // Menjamin jumlah minggu efektif dan non-efektif per bulan SANGAT TEPAT sesuai Kaldik
+  const nonEffectiveWeekMap = useMemo(() => {
+    const map: Record<string, { set: Set<number>; details: Record<number, { text: string; badge: string; color: string }> }> = {};
+
+    months.forEach(m => {
+      const monthLower = m.monthName.toLowerCase();
+      const targetNonEff = Math.min(m.totalWeeks, Math.max(0, m.nonEffectiveWeeks));
+      const set = new Set<number>();
+      const details: Record<number, { text: string; badge: string; color: string }> = {};
+
+      if (targetNonEff === 0) {
+        map[m.monthName] = { set, details };
+        return;
+      }
+
+      // Jika seluruh minggu di bulan ini tidak efektif
+      if (m.effectiveWeeks === 0 || targetNonEff >= m.totalWeeks) {
+        for (let w = 1; w <= m.totalWeeks; w++) {
+          set.add(w);
+        }
+      } else {
+        // Posisi default minggu non-efektif sesuai standar Kalender Pendidikan SMK Bawang
+        const preferredWeeks: number[] = [];
+        if (isGasal) {
+          if (monthLower === 'juli') preferredWeeks.push(1, 2, 3);
+          else if (monthLower === 'agustus') preferredWeeks.push(3);
+          else if (monthLower === 'september') preferredWeeks.push(1);
+          else if (monthLower === 'oktober') preferredWeeks.push(5);
+          else if (monthLower === 'november') preferredWeeks.push(4);
+          else if (monthLower === 'desember') preferredWeeks.push(1, 2, 3, 4, 5);
+        } else {
+          if (monthLower === 'januari') preferredWeeks.push(1);
+          else if (monthLower === 'februari') preferredWeeks.push(2);
+          else if (monthLower === 'maret') preferredWeeks.push(1, 3, 4);
+          else if (monthLower === 'april') preferredWeeks.push(1, 3, 4, 5);
+          else if (monthLower === 'mei') preferredWeeks.push(1, 2, 3, 4);
+          else if (monthLower === 'juni') preferredWeeks.push(1, 2, 3, 4);
+        }
+
+        // Gabungkan nomor minggu dari Kaldik events jika ada
+        if (events && events.length > 0) {
+          const monthEvents = events.filter(ev => ev.monthName.toLowerCase() === monthLower);
+          monthEvents.forEach(ev => {
+            if (ev.weekNumber && ev.weekNumber >= 1 && ev.weekNumber <= m.totalWeeks && !preferredWeeks.includes(ev.weekNumber)) {
+              preferredWeeks.push(ev.weekNumber);
+            }
+          });
+        }
+
+        // Ambil minggu dari prioritas hingga memenuhi targetNonEff
+        for (const w of preferredWeeks) {
+          if (set.size < targetNonEff && w <= m.totalWeeks) {
+            set.add(w);
+          }
+        }
+
+        // Jika masih kurang, tambahkan dari minggu akhir bulan
+        for (let w = m.totalWeeks; w >= 1 && set.size < targetNonEff; w--) {
+          set.add(w);
+        }
+      }
+
+      // Pasang keterangan badge dan warna untuk tiap minggu non-efektif
+      set.forEach(w => {
+        const matchingEvent = events?.find(ev => ev.monthName.toLowerCase() === monthLower && ev.weekNumber === w);
+        let badge = 'NON-EFEKTIF';
+        let color = 'bg-slate-200 text-slate-800 border-slate-300';
+        let text = matchingEvent?.name || m.notes?.join(', ') || 'Kegiatan Khusus / Non-KBM';
+
+        const checkStr = (matchingEvent?.name || text).toLowerCase();
+
+        if (checkStr.includes('mpls')) {
+          badge = 'MPLS';
+          color = 'bg-emerald-100 text-emerald-900 border-emerald-300';
+        } else if (checkStr.includes('anbk') || checkStr.includes('asesmen')) {
+          badge = 'ANBK';
+          color = 'bg-cyan-100 text-cyan-900 border-cyan-300';
+        } else if (checkStr.includes('psts') || checkStr.includes('tengah semester')) {
+          badge = 'PSTS';
+          color = 'bg-rose-200 text-rose-950 border-rose-400';
+        } else if (checkStr.includes('psas')) {
+          badge = 'PSAS';
+          color = 'bg-indigo-100 text-indigo-900 border-indigo-300';
+        } else if (checkStr.includes('psat') || checkStr.includes('akhir tahun')) {
+          badge = 'PSAT';
+          color = 'bg-indigo-100 text-indigo-900 border-indigo-300';
+        } else if (checkStr.includes('psaj')) {
+          badge = 'PSAJ';
+          color = 'bg-blue-100 text-blue-900 border-blue-300';
+        } else if (checkStr.includes('ukk')) {
+          badge = 'UKK';
+          color = 'bg-purple-100 text-purple-900 border-purple-300';
+        } else if (checkStr.includes('remedial') || checkStr.includes('susulan') || checkStr.includes('meeting')) {
+          badge = 'REMEDIAL';
+          color = 'bg-sky-100 text-sky-900 border-sky-300';
+        } else if (checkStr.includes('rapor')) {
+          badge = 'RAPOR';
+          color = 'bg-teal-100 text-teal-900 border-teal-300';
+        } else if (checkStr.includes('wisuda') || checkStr.includes('kelulusan') || checkStr.includes('lulus')) {
+          badge = 'WISUDA';
+          color = 'bg-amber-100 text-amber-900 border-amber-300';
+        } else if (checkStr.includes('libur') || checkStr.includes('idul')) {
+          badge = 'LIBUR';
+          color = 'bg-amber-100 text-amber-900 border-amber-300';
+        } else if (isGasal) {
+          if (monthLower === 'juli') {
+            if (w <= 2) { badge = 'LIBUR'; color = 'bg-amber-100 text-amber-900 border-amber-300'; text = 'Libur Semester Genap'; }
+            else { badge = 'MPLS'; color = 'bg-emerald-100 text-emerald-900 border-emerald-300'; text = 'Masa Pengenalan Lingkungan Sekolah'; }
+          } else if (monthLower === 'agustus') {
+            badge = 'ANBK'; color = 'bg-cyan-100 text-cyan-900 border-cyan-300'; text = 'Asesmen Nasional (ANBK)';
+          } else if (monthLower === 'september') {
+            badge = 'PSTS'; color = 'bg-rose-200 text-rose-950 border-rose-400'; text = 'Penilaian Sumatif Tengah Semester';
+          } else if (monthLower === 'desember') {
+            if (w === 1) { badge = 'PSAS'; color = 'bg-indigo-100 text-indigo-900 border-indigo-300'; text = 'Penilaian Sumatif Akhir Semester'; }
+            else if (w === 2) { badge = 'REMEDIAL'; color = 'bg-sky-100 text-sky-900 border-sky-300'; text = 'Ujian Susulan & Remedial'; }
+            else if (w === 3) { badge = 'RAPOR'; color = 'bg-teal-100 text-teal-900 border-teal-300'; text = 'Penyerahan Buku Rapor'; }
+            else { badge = 'LIBUR'; color = 'bg-amber-100 text-amber-900 border-amber-300'; text = 'Libur Akhir Semester Gasal'; }
+          }
+        } else {
+          if (monthLower === 'maret') {
+            if (w === 1) { badge = 'PSTS'; color = 'bg-rose-200 text-rose-950 border-rose-400'; text = 'PSTS Genap'; }
+            else { badge = 'LIBUR'; color = 'bg-amber-100 text-amber-900 border-amber-300'; text = 'Libur Hari Raya Idul Fitri'; }
+          } else if (monthLower === 'april') {
+            if (w === 1) { badge = 'PSAJ'; color = 'bg-blue-100 text-blue-900 border-blue-300'; text = 'PSAJ Kelas XII'; }
+            else { badge = 'UKK'; color = 'bg-purple-100 text-purple-900 border-purple-300'; text = 'Uji Kompetensi Keahlian'; }
+          } else if (monthLower === 'mei') {
+            if (w === 1) { badge = 'LULUS'; color = 'bg-amber-100 text-amber-900 border-amber-300'; text = 'Pengumuman Kelulusan'; }
+            else if (w === 2) { badge = 'WISUDA'; color = 'bg-amber-100 text-amber-900 border-amber-300'; text = 'Wisuda Siswa'; }
+            else { badge = 'LIBUR'; color = 'bg-amber-100 text-amber-900 border-amber-300'; text = 'Hari Libur Nasional'; }
+          } else if (monthLower === 'juni') {
+            if (w === 1) { badge = 'PSAT'; color = 'bg-indigo-100 text-indigo-900 border-indigo-300'; text = 'Penilaian Sumatif Akhir Tahun'; }
+            else if (w === 2) { badge = 'RAPOR'; color = 'bg-teal-100 text-teal-900 border-teal-300'; text = 'Remedial & Pembagian Rapor'; }
+            else { badge = 'LIBUR'; color = 'bg-amber-100 text-amber-900 border-amber-300'; text = 'Libur Akhir Tahun Pelajaran'; }
+          }
+        }
+
+        details[w] = { text, badge, color };
+      });
+
+      map[m.monthName] = { set, details };
+    });
+
+    return map;
+  }, [months, isGasal, events]);
+
   const getSpecialActivity = (monthName: string, week: number) => {
-    if (isGasal) {
-      if (monthName === 'Juli' && (week === 1 || week === 2)) {
-        return { text: 'Libur Semester Genap', badge: 'LIBUR', color: 'bg-amber-100 text-amber-900 border-amber-300' };
-      }
-      if (monthName === 'Juli' && (week === 3 || week === 4)) {
-        return { text: 'Masa Pengenalan Lingkungan Sekolah', badge: 'MPLS', color: 'bg-emerald-100 text-emerald-900 border-emerald-300' };
-      }
-      if (monthName === 'Agustus' && week === 2) {
-        return { text: 'Asesmen Nasional', badge: 'AN', color: 'bg-rose-100 text-rose-900 border-rose-300' };
-      }
-      if (monthName === 'September' && week === 4) {
-        return { text: 'Penilaian Sumatif Tengah Semester', badge: 'PSTS', color: 'bg-rose-200 text-rose-950 border-rose-400' };
-      }
-      if (monthName === 'Desember' && week === 1) {
-        return { text: 'Penilaian Sumatif Akhir Semester', badge: 'PSAS', color: 'bg-indigo-100 text-indigo-900 border-indigo-300' };
-      }
-      if (monthName === 'Desember' && (week === 2 || week === 3)) {
-        return { text: 'Ujian Susulan & Remedial', badge: 'REMEDIAL', color: 'bg-sky-100 text-sky-900 border-sky-300' };
-      }
-      if (monthName === 'Desember' && (week === 4 || week === 5)) {
-        return { text: 'Libur Semester Ganjil', badge: 'LIBUR', color: 'bg-amber-100 text-amber-900 border-amber-300' };
-      }
-    } else {
-      if (monthName === 'Maret' && week === 2) {
-        return { text: 'Penilaian Sumatif Tengah Semester', badge: 'PSTS', color: 'bg-rose-200 text-rose-950 border-rose-400' };
-      }
-      if (monthName === 'Maret' && (week === 3 || week === 4)) {
-        return { text: 'Libur Idul Fitri', badge: 'LIBUR', color: 'bg-purple-100 text-purple-900 border-purple-300' };
-      }
-      if (monthName === 'April' && week === 1) {
-        return { text: 'Penilaian Sumatif Akhir Jenjang', badge: 'PSAJ', color: 'bg-blue-100 text-blue-900 border-blue-300' };
-      }
-      if (monthName === 'April' && week === 2) {
-        return { text: 'PSAJ Susulan', badge: 'PSAJ SUS', color: 'bg-blue-100 text-blue-900 border-blue-300' };
-      }
-      if (monthName === 'April' && (week === 3 || week === 4)) {
-        return { text: 'Uji Kompetensi Keahlian', badge: 'UKK', color: 'bg-violet-100 text-violet-900 border-violet-300' };
-      }
-      if (monthName === 'Mei' && week === 1) {
-        return { text: 'Pengumuman Kelulusan', badge: 'LULUS', color: 'bg-amber-100 text-amber-900 border-amber-300' };
-      }
-      if (monthName === 'Mei' && week === 2) {
-        return { text: 'Wisuda Siswa', badge: 'WISUDA', color: 'bg-teal-100 text-teal-900 border-teal-300' };
-      }
-      if (monthName === 'Juni' && week === 1) {
-        return { text: 'Penilaian Sumatif Akhir Tahun', badge: 'PSAT', color: 'bg-indigo-100 text-indigo-900 border-indigo-300' };
-      }
-      if (monthName === 'Juni' && (week === 2 || week === 3)) {
-        return { text: 'Remedial & Class Meeting', badge: 'REMEDIAL', color: 'bg-sky-100 text-sky-900 border-sky-300' };
-      }
-      if (monthName === 'Juni' && week === 4) {
-        return { text: 'Libur Akhir Semester', badge: 'LIBUR', color: 'bg-amber-100 text-amber-900 border-amber-300' };
-      }
-    }
-    return null;
+    const data = nonEffectiveWeekMap[monthName];
+    if (!data || !data.set.has(week)) return null;
+    return data.details[week] || { text: 'Kegiatan Non-Efektif', badge: 'NON-EFEKTIF', color: 'bg-slate-200 text-slate-800 border-slate-300' };
   };
 
-  // Daftar urut seluruh minggu efektif dalam semester ini
+  // Daftar urut seluruh minggu efektif dalam semester ini (langsung sinkron dengan Kaldik)
   const effectiveWeekKeys = useMemo(() => {
     const keys: string[] = [];
     months.forEach(m => {
@@ -123,7 +220,7 @@ export const PromesView: React.FC<PromesViewProps> = ({
       }
     });
     return keys;
-  }, [months, isGasal]);
+  }, [months, nonEffectiveWeekMap]);
 
   // Otomasi Penuh: Menghitung pembagian minggu efektif
   // Setiap kolom minggu efektif otomatis terisi angka sesuai input Edit Data Guru (hoursPerWeek: 4 -> 4, 5 -> 5)
@@ -289,10 +386,16 @@ export const PromesView: React.FC<PromesViewProps> = ({
           </button>
         </div>
 
-        {/* Dynamic Calculation badge showing weeklyHours x effectiveWeeks */}
-        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-900">
-          <span className="font-medium">Total Jam Semester {activeSemester}:</span>
-          <strong className="font-bold">{hoursPerWeek} JP × {semEffWeeks} Mgg = {totalTargetHours} JP</strong>
+        {/* Dynamic Calculation badge showing weeklyHours x effectiveWeeks & Kaldik sync */}
+        <div className="hidden sm:flex items-center gap-2">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-900">
+            <span className="font-medium">Total Jam Sem {activeSemester}:</span>
+            <strong className="font-bold">{hoursPerWeek} JP × {semEffWeeks} Mgg = {totalTargetHours} JP</strong>
+          </div>
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-900">
+            <CalendarCheck className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Kaldik: <strong>{totalWeeks} Mgg</strong> ({semEffWeeks} Efektif, {totalNonEffWeeks} Khusus)</span>
+          </div>
         </div>
 
         {/* Action buttons */}

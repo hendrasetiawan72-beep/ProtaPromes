@@ -87,7 +87,23 @@ export default function App() {
 
   const [monthAnalysis, setMonthAnalysis] = useState<MonthEffectiveBreakdown[]>(() => {
     const saved = localStorage.getItem('jg_monthAnalysis');
-    return saved ? JSON.parse(saved) : INITIAL_MONTH_ANALYSIS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length === 12) {
+          const sem1Eff = parsed.filter((m: any) => m.semester === 1).reduce((s: number, m: any) => s + (m.effectiveWeeks || 0), 0);
+          const sem2Eff = parsed.filter((m: any) => m.semester === 2).reduce((s: number, m: any) => s + (m.effectiveWeeks || 0), 0);
+          // If stored data still has the old stale defaults (19 Sem 1 & 18 Sem 2), migrate to new Kaldik data
+          if (sem1Eff === 19 && sem2Eff === 18) {
+            return INITIAL_MONTH_ANALYSIS;
+          }
+          return parsed;
+        }
+      } catch {
+        return INITIAL_MONTH_ANALYSIS;
+      }
+    }
+    return INITIAL_MONTH_ANALYSIS;
   });
 
   const [events, setEvents] = useState<KaldikEvent[]>(() => {
@@ -533,6 +549,7 @@ export default function App() {
             onUpdateObjectivesSem1={setObjectivesSem1}
             onUpdateObjectivesSem2={setObjectivesSem2}
             monthAnalysis={monthAnalysis}
+            events={events}
           />
         )}
 
