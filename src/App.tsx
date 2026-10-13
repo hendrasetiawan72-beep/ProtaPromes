@@ -571,6 +571,7 @@ export default function App() {
             onUpdateObjectivesSem1={setObjectivesSem1}
             onUpdateObjectivesSem2={setObjectivesSem2}
             monthAnalysis={monthAnalysis}
+            events={events}
           />
         )}
 
